@@ -5,6 +5,8 @@ import { createPatient } from './API.js';
 
 // Initialize the bot
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+console.log('TELEGRAM_BOT_TOKEN:', process.env.TELEGRAM_BOT_TOKEN);
+console.log('PATIENT_FORM_BASE_URL:', process.env.PATIENT_FORM_BASE_URL);
 
 // Add the /start command handler
 bot.onText(/\/start/, async (msg) => {

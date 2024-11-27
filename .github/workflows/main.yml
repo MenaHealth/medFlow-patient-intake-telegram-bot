@@ -25,6 +25,8 @@ jobs:
             cd medFlow-patient-intake-telegram-bot
             echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" > .env
             echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
+            echo "DEBUG: Contents of .env file:"
+            cat .env
             git pull
             . ~/.nvm/nvm.sh
             nvm use 16
