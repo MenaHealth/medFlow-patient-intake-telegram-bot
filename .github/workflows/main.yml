@@ -14,8 +14,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.3
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          PATIENT_FORM_BASE_URL: ${{ secrets.PATIENT_FORM_BASE_URL }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
@@ -23,12 +33,18 @@ jobs:
           port: 22
           script: |
             cd medFlow-patient-intake-telegram-bot
-            echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" > .env
-            echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
-            echo "DEBUG: Contents of .env file:"
-            cat .env
             git pull
             . ~/.nvm/nvm.sh
             nvm use 16
+            
+            # Create .env file with variables
+            echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" > .env
+            echo "PATIENT_FORM_BASE_URL=$PATIENT_FORM_BASE_URL" >> .env
+            
             npm install
-            npm run dev
+            
+            # Stop existing process if running
+            pm2 stop telegram-bot || true
+            
+            # Start the bot using PM2 for process management
+            pm2 start npm --name "telegram-bot" -- run dev
