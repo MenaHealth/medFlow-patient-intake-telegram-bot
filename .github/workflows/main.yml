@@ -1,4 +1,3 @@
-
 name: Deploy to EC2
 
 on:
@@ -9,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: prod #
+    environment: prod
 
     steps:
       - name: Checkout code
@@ -25,5 +24,7 @@ jobs:
           script: |
             cd medFlow-patient-intake-telegram-bot
             git pull
+            . ~/.nvm/nvm.sh
+            nvm use 16
             npm install
             npm run dev
