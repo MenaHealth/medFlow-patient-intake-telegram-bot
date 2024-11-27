@@ -22,7 +22,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
         script: |
-          cd /medFlow-patient-intake-telegram-bot
+          cd medFlow-patient-intake-telegram-bot
           git pull
           npm install
           pm2 restart all
