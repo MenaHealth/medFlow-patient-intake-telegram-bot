@@ -15,3 +15,4 @@ A Telegram bot that facilitates patient registration by providing users with a c
 - npm or yarn
 - A Telegram Bot Token (obtained from [@BotFather](https://t.me/botfather))
 - MongoDB database
+- somewhere to host the bot. https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-up-node-on-ec2-instance.html
