@@ -21,7 +21,11 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
         script: |
-          cd /path/to/your/repo
-          git pull
-          npm install
-          pm2 restart all
+          echo "Navigating to project directory..."
+          cd /home/ec2-user/medFlow-patient-intake-telegram-bot || exit 1
+          echo "Pulling latest changes..."
+          git pull || exit 1
+          echo "Installing dependencies..."
+          npm install || exit 1
+          echo "Restarting application with PM2..."
+          pm2 restart all || exit 1
