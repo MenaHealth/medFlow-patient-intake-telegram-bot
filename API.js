@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 const API_BASE_URL = process.env.PATIENT_FORM_BASE_URL || 'http://localhost:3000';
 
 export async function createOrGetPatient(telegramChatId) {
+  console.log("API_BASE_URL:", API_BASE_URL);
   try {
     const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
       method: 'POST',
