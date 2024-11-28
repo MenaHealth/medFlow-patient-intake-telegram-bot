@@ -21,7 +21,23 @@ jobs:
           script: |
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            cd medFlow-patient-intake-telegram-bot
-            pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
-            pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
-            pm2 save
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            export PATH="$HOME/.nvm/versions/node/v16.15.1/bin:$PATH"
+            cd $HOME/medFlow-patient-intake-telegram-bot
+            if command -v pm2 &> /dev/null; then
+              echo "PM2 is available"
+              pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
+              pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
+              pm2 save
+            else
+              echo "PM2 is not available. Attempting to install..."
+              npm install -g pm2
+              if command -v pm2 &> /dev/null; then
+                echo "PM2 installed successfully"
+                pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
+                pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
+                pm2 save
+              else
+                echo "Failed to install PM2. Please check your Node.js installation."
+              fi
+            fi
