@@ -26,18 +26,41 @@ jobs:
             cd $HOME/medFlow-patient-intake-telegram-bot
             if command -v pm2 &> /dev/null; then
               echo "PM2 is available"
-              pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
-              pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
+              pm2 stop "telegram-bot*" || echo "No Telegram bot instances are running"
+              pm2 delete "telegram-bot*" || echo "No Telegram bot instances to delete"
               pm2 save
+              # Clean up any unnecessary instances
+              pm2 flush
             else
               echo "PM2 is not available. Attempting to install..."
               npm install -g pm2
               if command -v pm2 &> /dev/null; then
                 echo "PM2 installed successfully"
-                pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
-                pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
+                pm2 stop "telegram-bot*" || echo "No Telegram bot instances are running"
+                pm2 delete "telegram-bot*" || echo "No Telegram bot instances to delete"
                 pm2 save
+                # Clean up any unnecessary instances
+                pm2 flush
               else
                 echo "Failed to install PM2. Please check your Node.js installation."
               fi
+            fi
+
+      - name: Verify bot status
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            export PATH="$HOME/.nvm/versions/node/v16.15.1/bin:$PATH"
+            if pm2 list | grep -q "telegram-bot"; then
+              echo "Warning: Some telegram-bot instances might still be running"
+              pm2 list
+            else
+              echo "All telegram-bot instances have been successfully stopped and deleted"
             fi
