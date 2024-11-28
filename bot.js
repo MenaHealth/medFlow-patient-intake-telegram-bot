@@ -1,45 +1,72 @@
 // bot.js
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 import { createOrGetPatient } from './API.js';
 
-// Track user states to prevent redundant messages
+dotenv.config();
+
 const userStates = {};
 
-// Initialize the bot
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-console.log('TELEGRAM_BOT_TOKEN:', process.env.TELEGRAM_BOT_TOKEN);
 console.log('PATIENT_FORM_BASE_URL:', process.env.PATIENT_FORM_BASE_URL);
+console.log('Bot token loaded:', process.env.TELEGRAM_BOT_TOKEN ? 'Yes' : 'No');
 
-// Add the /start command handler
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
+  if (userStates[chatId]?.processing) {
+    console.log(`Duplicate request for chat ID: ${chatId}. Ignoring.`);
+    return;
+  }
+
+  userStates[chatId] = { processing: true };
+
   try {
-    const patientLink = await createOrGetPatient(chatId);
-    if (patientLink.includes('/register/')) {
-      bot.sendMessage(chatId, `Welcome! Please fill out the following form to complete your registration: ${patientLink}`);
-      userStates[chatId] = { started: true };
+    console.log(`Processing request for chat ID: ${chatId}`);
+    await bot.sendMessage(chatId, "Processing your request. This may take a moment...");
+
+    const patientData = await createOrGetPatient(chatId);
+    console.log(`Received patient data:`, patientData);
+
+    if (patientData.registrationUrl) {
+      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${patientData.registrationUrl}`);
+    } else if (patientData.patientDashboardUrl) {
+      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${patientData.patientDashboardUrl}`);
     } else {
-      bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${patientLink}`);
+      throw new Error('Unexpected response from server');
     }
+
+    userStates[chatId] = { notified: true };
   } catch (error) {
     console.error('Error processing patient:', error);
-    bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later or contact support.');
+    await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later or contact support.');
+  } finally {
+    userStates[chatId].processing = false;
   }
 });
 
-// Handle any other message
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
 
-  // Avoid sending generic messages repeatedly
-  if (!userStates[chatId]?.notified) {
+  if (!userStates[chatId]?.processing && !userStates[chatId]?.notified) {
     bot.sendMessage(chatId, "To start or continue the process, please send /start");
     userStates[chatId] = { ...userStates[chatId], notified: true };
   }
 });
 
+bot.on('polling_error', (error) => {
+  console.error('Polling error:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 console.log('Bot is running...');
+
+
+
+
+
 
 
