@@ -6,6 +6,7 @@ on:
 jobs:
   stop_bot:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - name: Debug SSH Key
         run: echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
