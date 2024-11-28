@@ -1,21 +1,30 @@
 // API.js
 import fetch from 'node-fetch';
 
-const API_BASE_URL = process.env.PATIENT_FORM_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-export async function createPatient(telegramChatId) {
-  const response = await fetch(`${API_BASE_URL}/api/patient/new`, {
+export async function createOrGetPatient(telegramChatId) {
+  const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegramChatId }),
+    body: JSON.stringify({ chatId: telegramChatId }),
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to create patient');
+    throw new Error(error.message || 'Failed to process patient');
   }
 
   const data = await response.json();
-  return `${API_BASE_URL}/new-patient/${data._id}`;
+
+  if (data.registrationUrl) {
+    return data.registrationUrl;
+  } else if (data.patientId) {
+    return `${API_BASE_URL}/patient/${data.patientId}`;
+  } else {
+    throw new Error('Unexpected response from server');
+  }
 }
+
+
 
