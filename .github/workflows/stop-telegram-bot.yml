@@ -20,4 +20,4 @@ jobs:
           port: 22
           script: |
             cd medFlow-patient-intake-telegram-bot
-            pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
+            pm2 stop telegram-bot
