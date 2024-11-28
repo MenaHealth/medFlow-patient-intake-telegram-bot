@@ -1,7 +1,8 @@
 // API.js
+// API.js
 import fetch from 'node-fetch';
 
-const API_BASE_URL = process.env.PATIENT_FORM_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = 'https://medflow-mena-health.vercel.app'; // Hardcoded external URL
 
 export async function createOrGetPatient(telegramChatId) {
   console.log("API_BASE_URL:", API_BASE_URL);
@@ -33,7 +34,6 @@ export async function createOrGetPatient(telegramChatId) {
     throw error;
   }
 }
-
 
 
 
