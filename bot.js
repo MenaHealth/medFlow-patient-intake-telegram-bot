@@ -25,13 +25,13 @@ bot.onText(/\/start/, async (msg) => {
     console.log(`Processing request for chat ID: ${chatId}`);
     await bot.sendMessage(chatId, "Processing your request. This may take a moment...");
 
-    const patientData = await createOrGetPatient(chatId);
-    console.log(`Received patient data:`, patientData);
+    const response = await createOrGetPatient(chatId);
+    console.log(`Received patient data:`, response);
 
-    if (patientData.registrationUrl) {
-      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${patientData.registrationUrl}`);
-    } else if (patientData.patientDashboardUrl) {
-      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${patientData.patientDashboardUrl}`);
+    if (response.registrationUrl) {
+      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.registrationUrl}`);
+    } else if (response.patientDashboardUrl) {
+      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${response.patientDashboardUrl}`);
     } else {
       throw new Error('Unexpected response from server');
     }
@@ -63,10 +63,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Bot is running...');
-
-
-
-
-
-
-
