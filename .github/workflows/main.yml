@@ -45,5 +45,7 @@ jobs:
             pm2 install pm2-logrotate
             pm2 set pm2-logrotate:max_size 10M
             pm2 set pm2-logrotate:retain 5
-            # Monitor PM2 processes
-            pm2 monit
+            # List current PM2 processes
+            pm2 list
+            # Display recent logs
+            pm2 logs --lines 20
