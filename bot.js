@@ -31,7 +31,7 @@ bot.onText(/\/start/, async (msg) => {
     if (response.type === 'new') {
       await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.url}`);
     } else if (response.type === 'existing') {
-      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${response.url}`);
+      await bot.sendMessage(chatId, `Please complete your registration using this link: ${response.url}`);
     } else {
       throw new Error('Unexpected response from server');
     }
@@ -63,4 +63,6 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Bot is running...');
+
+
 
