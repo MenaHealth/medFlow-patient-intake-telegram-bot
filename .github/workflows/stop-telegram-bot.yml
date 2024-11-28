@@ -1,12 +1,15 @@
 name: Stop Telegram Bot
 
 on:
-  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+  workflow_dispatch:
 
 jobs:
   stop_bot:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug SSH Key
+        run: echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
+
       - name: Stop the Telegram Bot
         uses: appleboy/ssh-action@v0.1.3
         with:
