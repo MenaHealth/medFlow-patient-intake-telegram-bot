@@ -24,8 +24,7 @@ jobs:
           script: |
             cd medFlow-patient-intake-telegram-bot
             git pull
-            . ~/.nvm/nvm.sh
-            nvm use 16
+            nvm install 16.15.1
             # Append to .env only if variables are missing
             grep -qxF "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" .env || echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
             grep -qxF "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" .env || echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
