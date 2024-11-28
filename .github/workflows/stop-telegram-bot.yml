@@ -7,7 +7,7 @@ jobs:
   stop_bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Debug SSH Key Length
+      - name: Debug SSH Key
         run: echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
 
       - name: Stop the Telegram Bot
