@@ -28,10 +28,10 @@ bot.onText(/\/start/, async (msg) => {
     const response = await createOrGetPatient(chatId);
     console.log(`Received patient data:`, response);
 
-    if (response.registrationUrl) {
-      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.registrationUrl}`);
-    } else if (response.patientDashboardUrl) {
-      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${response.patientDashboardUrl}`);
+    if (response.type === 'new') {
+      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.url}`);
+    } else if (response.type === 'existing') {
+      await bot.sendMessage(chatId, `Welcome back! Here's your patient dashboard: ${response.url}`);
     } else {
       throw new Error('Unexpected response from server');
     }
@@ -63,3 +63,4 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log('Bot is running...');
+

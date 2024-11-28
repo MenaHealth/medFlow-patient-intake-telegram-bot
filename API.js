@@ -22,9 +22,9 @@ export async function createOrGetPatient(telegramChatId) {
     const data = await response.json();
 
     if (data.registrationUrl) {
-      return data.registrationUrl;
-    } else if (data.patientId) {
-      return `${API_BASE_URL}/patient/${data.patientId}`;
+      return { type: 'new', url: data.registrationUrl };
+    } else if (data.patientDashboardUrl) {
+      return { type: 'existing', url: data.patientDashboardUrl };
     } else {
       console.error('Unexpected server response:', data);
       throw new Error('Unexpected response from server');
