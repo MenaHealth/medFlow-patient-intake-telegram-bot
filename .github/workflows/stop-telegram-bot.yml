@@ -19,5 +19,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd medFlow-patient-intake-telegram-bot
-            ~/.nvm/versions/node/v16.15.1/bin/pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
+            pm2 stop telegram-bot || echo "Telegram bot is already stopped or not running"
+            pm2 delete telegram-bot || echo "No telegram-bot processes to delete"
+            pm2 save
