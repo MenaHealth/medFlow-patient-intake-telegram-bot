@@ -22,30 +22,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             cd medFlow-patient-intake-telegram-bot
             git pull
             nvm install 16.15.1
-            nvm use 16.15.1
             # Append to .env only if variables are missing
             grep -qxF "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" .env || echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
             grep -qxF "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" .env || echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
             npm install
-            # Stop and delete any existing bot instances
-            pm2 stop telegram-bot || true
-            pm2 delete telegram-bot || true
-            # Start the bot with a unique name
-            UNIQUE_NAME="telegram-bot-$(date +%s)"
-            pm2 start npm --name "$UNIQUE_NAME" -- run dev
+            # Stop the bot if it's already running
+            pm2 describe telegram-bot && pm2 stop telegram-bot || echo "Bot is not running"
+            # Start the bot in the background using pm2
+            pm2 start npm --name "telegram-bot" -- run dev
             # Save the pm2 process list for auto-restart on reboot
             pm2 save
-            # Set up log rotation
-            pm2 install pm2-logrotate
-            pm2 set pm2-logrotate:max_size 10M
-            pm2 set pm2-logrotate:retain 5
-            # List current PM2 processes
-            pm2 list
-            # Display recent logs
-            pm2 logs --lines 20
