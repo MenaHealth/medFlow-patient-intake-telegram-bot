@@ -1,7 +1,7 @@
 // API.js
 import fetch from 'node-fetch';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.PATIENT_FORM_BASE_URL || 'http://localhost:3000';
 
 export async function createOrGetPatient(telegramChatId) {
   const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
@@ -25,6 +25,7 @@ export async function createOrGetPatient(telegramChatId) {
     throw new Error('Unexpected response from server');
   }
 }
+
 
 
 
