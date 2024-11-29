@@ -33,7 +33,7 @@ jobs:
             # Update or append keys in the .env file
             sed -i "/^TELEGRAM_BOT_TOKEN=/d" .env && echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
             sed -i "/^PATIENT_FORM_BASE_URL=/d" .env && echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
-            sed -i "/^PROD_TELEGRAM_KEY=/d" .env && echo "PROD_TELEGRAM_KEY=${{ secrets.PROD_TELEGRAM_KEY }}" >> .env
+            sed -i "/^PROD_TELEGRAM_BOT_KEY=/d" .env && echo "PROD_TELEGRAM_BOT_KEY=${{ secrets.PROD_TELEGRAM_BOT_KEY }}" >> .env
 
             npm install
 

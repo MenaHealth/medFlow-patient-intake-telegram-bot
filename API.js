@@ -8,8 +8,8 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
 
 // Select the appropriate key based on the environment
 const API_KEY = process.env.NODE_ENV === 'development'
-    ? process.env.DEV_TELEGRAM_KEY
-    : process.env.PROD_TELEGRAM_KEY;
+    ? process.env.DEV_TELEGRAM_BOT_KEY
+    : process.env.PROD_TELEGRAM_BOT_KEY;
 
 // Function to create or get patient data
 export async function createOrGetPatient(telegramChatId, firstName, lastName = null) {
