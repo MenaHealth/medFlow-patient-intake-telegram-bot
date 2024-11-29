@@ -5,14 +5,35 @@ import { createOrGetPatient } from './API.js';
 
 dotenv.config();
 
+const isTesting = process.env.NODE_ENV === 'development';
+const botToken = isTesting ? process.env.TELEGRAM_BOT_TOKEN_DEV : process.env.TELEGRAM_BOT_TOKEN;
+const baseUrl = isTesting
+    ? process.env.DEV_PATIENT_FORM_BASE_URL
+    : process.env.PATIENT_FORM_BASE_URL;
+
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('Using Telegram Bot Token:', isTesting ? 'DEV' : 'PRODUCTION');
+// console.log('Bot Token Value:', botToken);
+console.log('Environment URL:', baseUrl);
+
+// Verify values
+if (!botToken) {
+  throw new Error('Bot token is missing! Check your .env file or NODE_ENV value.');
+}
+
+if (isTesting && botToken === process.env.TELEGRAM_BOT_TOKEN) {
+  throw new Error('Development mode is using the production bot token!');
+}
+
+const bot = new TelegramBot(botToken, { polling: true });
 const userStates = {};
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-console.log('PATIENT_FORM_BASE_URL:', process.env.PATIENT_FORM_BASE_URL);
-console.log('Bot token loaded:', process.env.TELEGRAM_BOT_TOKEN ? 'Yes' : 'No');
+console.log('Bot pre reqs loaded...');
+
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
+  const name = msg.chat.first_name; // Retrieve user's first name
 
   if (userStates[chatId]?.processing) {
     console.log(`Duplicate request for chat ID: ${chatId}. Ignoring.`);
@@ -22,16 +43,16 @@ bot.onText(/\/start/, async (msg) => {
   userStates[chatId] = { processing: true };
 
   try {
-    console.log(`Processing request for chat ID: ${chatId}`);
+    console.log(`Processing request for chat ID: ${chatId}, Name: ${name}`);
     await bot.sendMessage(chatId, "Processing your request. This may take a moment...");
 
-    const response = await createOrGetPatient(chatId);
+    const response = await createOrGetPatient(chatId, name);
     console.log(`Received patient data:`, response);
 
     if (response.type === 'new') {
       await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.url}`);
     } else if (response.type === 'existing') {
-      await bot.sendMessage(chatId, `Please complete your registration using this link: ${response.url}`);
+      await bot.sendMessage(chatId, `Welcome back! Here's your dashboard: ${response.url}`);
     } else {
       throw new Error('Unexpected response from server');
     }
@@ -62,7 +83,12 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-console.log('Bot is running...');
+if (isTesting && botToken === process.env.TELEGRAM_BOT_TOKEN) {
+  throw new Error("Development mode is using the production bot token!");
+}
+
+console.log('Bot loaded');
+console.log('Base URL being used:', baseUrl);
 
 
 

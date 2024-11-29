@@ -1,16 +1,20 @@
 // API.js
-// API.js
 import fetch from 'node-fetch';
 
-const API_BASE_URL = 'https://medflow-mena-health.vercel.app'; // Hardcoded external URL
+// Choose base URL dynamically based on the environment
+const API_BASE_URL = process.env.NODE_ENV === 'development'
+    ? process.env.DEV_PATIENT_FORM_BASE_URL || 'http://localhost:3000' // Development URL (fallback to localhost)
+    : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app'; // Production URL (fallback to prod)
 
-export async function createOrGetPatient(telegramChatId) {
+// Function to create or get patient data
+export async function createOrGetPatient(telegramChatId, name = null) {
   console.log("API_BASE_URL:", API_BASE_URL);
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatId: telegramChatId }),
+      body: JSON.stringify({ chatId: telegramChatId, name }), // Include the name if available
     });
 
     if (!response.ok) {
@@ -34,9 +38,3 @@ export async function createOrGetPatient(telegramChatId) {
     throw error;
   }
 }
-
-
-
-
-
-

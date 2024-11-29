@@ -26,12 +26,12 @@ jobs:
             git pull
             nvm install 16.15.1
             # Append to .env only if variables are missing
-            grep -qxF "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" .env || echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
-            grep -qxF "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" .env || echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
+            grep -qxF "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" .env || sed -i "/^TELEGRAM_BOT_TOKEN=/d" .env && echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+            grep -qxF "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" .env || sed -i "/^PATIENT_FORM_BASE_URL=/d" .env && echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
             npm install
             # Stop the bot if it's already running
             pm2 describe telegram-bot && pm2 stop telegram-bot || echo "Bot is not running"
             # Start the bot in the background using pm2
-            pm2 start npm --name "telegram-bot" -- run dev
+            pm2 start npm --name "telegram-bot" -- start
             # Save the pm2 process list for auto-restart on reboot
             pm2 save
