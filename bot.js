@@ -33,7 +33,8 @@ console.log('Bot pre reqs loaded...');
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
-  const name = msg.chat.first_name; // Retrieve user's first name
+  const firstName = msg.chat.first_name;
+  const lastName = msg.chat.last_name;
 
   if (userStates[chatId]?.processing) {
     console.log(`Duplicate request for chat ID: ${chatId}. Ignoring.`);
@@ -43,23 +44,23 @@ bot.onText(/\/start/, async (msg) => {
   userStates[chatId] = { processing: true };
 
   try {
-    console.log(`Processing request for chat ID: ${chatId}, Name: ${name}`);
-    await bot.sendMessage(chatId, "Processing your request. This may take a moment...");
+    console.log(`Processing request for chat ID: ${chatId}, first name: ${firstName}, last name: ${lastName}`);
+    await bot.sendMessage(chatId, "💬");
 
-    const response = await createOrGetPatient(chatId, name);
+    const response = await createOrGetPatient(chatId, firstName, lastName);
     console.log(`Received patient data:`, response);
 
-    if (response.type === 'new') {
-      await bot.sendMessage(chatId, `Welcome! Please complete your registration using this link: ${response.url}`);
-    } else if (response.type === 'existing') {
-      await bot.sendMessage(chatId, `Welcome back! Here's your dashboard: ${response.url}`);
-    } else {
-      throw new Error('Unexpected response from server');
+    // Separate the welcome message and link into two distinct messages
+    if (response.message) {
+      await bot.sendMessage(chatId, response.message);
     }
-
-    userStates[chatId] = { notified: true };
+    if (response.url) {
+      await bot.sendMessage(chatId, response.url);
+    }
   } catch (error) {
     console.error('Error processing patient:', error);
+
+    // Ensure a meaningful message is sent even on errors
     await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later or contact support.');
   } finally {
     userStates[chatId].processing = false;
@@ -69,9 +70,11 @@ bot.onText(/\/start/, async (msg) => {
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
 
-  if (!userStates[chatId]?.processing && !userStates[chatId]?.notified) {
-    bot.sendMessage(chatId, "To start or continue the process, please send /start");
-    userStates[chatId] = { ...userStates[chatId], notified: true };
+  if (!userStates[chatId]?.processing && !msg.text.startsWith('/start')) {
+    if (!userStates[chatId]?.notified) {
+      bot.sendMessage(chatId, "To start or continue the process, please send /start");
+      userStates[chatId] = { ...userStates[chatId], notified: true };
+    }
   }
 });
 
