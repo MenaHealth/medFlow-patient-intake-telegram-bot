@@ -25,13 +25,22 @@ jobs:
             cd medFlow-patient-intake-telegram-bot
             git pull
             nvm install 16.15.1
-            # Append to .env only if variables are missing
-            grep -qxF "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" .env || sed -i "/^TELEGRAM_BOT_TOKEN=/d" .env && echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
-            grep -qxF "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" .env || sed -i "/^PATIENT_FORM_BASE_URL=/d" .env && echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
+
+            # Ensure .env file exists
+            touch .env
+
+            # Update or append keys in the .env file
+            sed -i "/^TELEGRAM_BOT_TOKEN=/d" .env && echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+            sed -i "/^PATIENT_FORM_BASE_URL=/d" .env && echo "PATIENT_FORM_BASE_URL=${{ secrets.PATIENT_FORM_BASE_URL }}" >> .env
+            sed -i "/^PROD_MEDFLOW_KEY=/d" .env && echo "PROD_MEDFLOW_KEY=${{ secrets.PROD_MEDFLOW_KEY }}" >> .env
+
             npm install
+
             # Stop the bot if it's already running
             pm2 describe telegram-bot && pm2 stop telegram-bot || echo "Bot is not running"
+
             # Start the bot in the background using pm2
             pm2 start npm --name "telegram-bot" -- start
+
             # Save the pm2 process list for auto-restart on reboot
             pm2 save
