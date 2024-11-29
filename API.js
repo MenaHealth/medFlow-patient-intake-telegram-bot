@@ -8,8 +8,8 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
 
 // Select the appropriate key based on the environment
 const API_KEY = process.env.NODE_ENV === 'development'
-    ? process.env.DEV_MEDFLOW_KEY
-    : process.env.PROD_MEDFLOW_KEY;
+    ? process.env.DEV_TELEGRAM_KEY
+    : process.env.PROD_TELEGRAM_KEY;
 
 // Function to create or get patient data
 export async function createOrGetPatient(telegramChatId, firstName, lastName = null) {
@@ -17,23 +17,19 @@ export async function createOrGetPatient(telegramChatId, firstName, lastName = n
   console.log("Payload sent to API:", { chatId: telegramChatId, firstName, lastName });
 
   try {
-    const API_KEY = process.env.NODE_ENV === 'development'
-        ? process.env.DEV_MEDFLOW_KEY
-        : process.env.PROD_MEDFLOW_KEY;
+    const apiKey = process.env.NODE_ENV === 'development'
+        ? process.env.DEV_TELEGRAM_BOT_KEY
+        : process.env.PROD_TELEGRAM_BOT_KEY;
 
-    console.log("Using API Key:", API_KEY);
+    const encodedApiKey = encodeURIComponent(apiKey);
 
-    const encodedApiKey = encodeURIComponent(API_KEY);
-
-    console.log("Encoded API Key:", encodedApiKey);
-
-    const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
+    const response = await fetch(`${baseUrl}/api/telegram-bot`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${encodedApiKey}`
+        'Authorization': `Bearer ${encodedApiKey}`,
       },
-      body: JSON.stringify({ chatId: telegramChatId, firstName, lastName }),
+      body: JSON.stringify({ chatId, firstName, lastName }),
     });
 
     if (!response.ok) {
