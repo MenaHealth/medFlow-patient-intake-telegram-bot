@@ -25,6 +25,7 @@ jobs:
             cd medFlow-patient-intake-telegram-bot
             git pull
             nvm install 16.15.1
+            nvm alias default 16.15.1
 
             # Ensure .env file exists
             touch .env
