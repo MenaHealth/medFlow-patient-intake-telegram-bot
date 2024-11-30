@@ -22,6 +22,7 @@ export async function createOrGetPatient(telegramChatId, firstName, lastName = n
         : process.env.PROD_TELEGRAM_BOT_KEY;
 
     const encodedApiKey = encodeURIComponent(apiKey);
+    console.log("Encoded API Key Sent:", encodedApiKey);
 
     const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, { // Use API_BASE_URL here
       method: 'POST',

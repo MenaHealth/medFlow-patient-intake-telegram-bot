@@ -45,12 +45,14 @@ bot.onText(/\/start/, async (msg) => {
 
   try {
     console.log(`Processing request for chat ID: ${chatId}, first name: ${firstName}, last name: ${lastName}`);
-    await bot.sendMessage(chatId, "💬");
-
     const response = await createOrGetPatient(chatId, firstName, lastName);
     console.log(`Received patient data:`, response);
 
-    // Separate the welcome message and link into two distinct messages
+    // Log debug info if present
+    if (response.debug) {
+      console.log("Debug Info from API:", response.debug);
+    }
+
     if (response.message) {
       await bot.sendMessage(chatId, response.message);
     }
@@ -59,8 +61,6 @@ bot.onText(/\/start/, async (msg) => {
     }
   } catch (error) {
     console.error('Error processing patient:', error);
-
-    // Ensure a meaningful message is sent even on errors
     await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later or contact support.');
   } finally {
     userStates[chatId].processing = false;
