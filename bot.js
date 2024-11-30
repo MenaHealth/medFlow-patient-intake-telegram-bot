@@ -11,18 +11,25 @@ const baseUrl = isTesting
     ? process.env.DEV_PATIENT_FORM_BASE_URL
     : process.env.PATIENT_FORM_BASE_URL;
 
-// Minimal startup logging
-console.log('Starting Telegram bot...');
-console.log('Environment:', isTesting ? 'Development' : 'Production');
-console.log('Base URL:', baseUrl);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('Using Telegram Bot Token:', isTesting ? 'DEV' : 'PRODUCTION');
+// console.log('Bot Token Value:', botToken);
+console.log('Environment URL:', baseUrl);
 
-// Verify critical configuration
+// Verify values
 if (!botToken) {
   throw new Error('Bot token is missing! Check your .env file or NODE_ENV value.');
 }
 
+if (isTesting && botToken === process.env.TELEGRAM_BOT_TOKEN) {
+  throw new Error('Development mode is using the production bot token!');
+}
+
 const bot = new TelegramBot(botToken, { polling: true });
 const userStates = {};
+
+console.log('Bot pre reqs loaded...');
+
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -30,15 +37,16 @@ bot.onText(/\/start/, async (msg) => {
   const lastName = msg.chat.last_name;
 
   if (userStates[chatId]?.processing) {
-    console.warn(`Duplicate request ignored for chat ID: ${chatId}`);
+    console.log(`Duplicate request for chat ID: ${chatId}. Ignoring.`);
     return;
   }
 
   userStates[chatId] = { processing: true };
 
   try {
-    console.log(`Processing /start for chat ID: ${chatId}`);
+    console.log(`Processing request for chat ID: ${chatId}, first name: ${firstName}, last name: ${lastName}`);
     const response = await createOrGetPatient(chatId, firstName, lastName);
+    console.log(`Received patient data:`, response);
 
     if (response.message) {
       await bot.sendMessage(chatId, response.message);
@@ -47,8 +55,8 @@ bot.onText(/\/start/, async (msg) => {
       await bot.sendMessage(chatId, response.url);
     }
   } catch (error) {
-    console.error('Error processing /start command:', error);
-    await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later.');
+    console.error('Error processing patient:', error);
+    await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later or contact support.');
   } finally {
     userStates[chatId].processing = false;
   }
@@ -66,11 +74,18 @@ bot.on('message', (msg) => {
 });
 
 bot.on('polling_error', (error) => {
-  console.error('Polling error:', error.message || error);
+  console.error('Polling error:', error);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection:', reason);
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-console.log('Telegram bot is up and running.');
+if (isTesting && botToken === process.env.TELEGRAM_BOT_TOKEN) {
+  throw new Error("Development mode is using the production bot token!");
+}
+
+console.log('Bot loaded');
+
+
+
