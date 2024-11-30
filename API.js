@@ -23,13 +23,13 @@ export async function createOrGetPatient(telegramChatId, firstName, lastName = n
 
     const encodedApiKey = encodeURIComponent(apiKey);
 
-    const response = await fetch(`${baseUrl}/api/telegram-bot`, {
+    const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, { // Use API_BASE_URL here
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${encodedApiKey}`,
       },
-      body: JSON.stringify({ chatId, firstName, lastName }),
+      body: JSON.stringify({ chatId: telegramChatId, firstName, lastName }),
     });
 
     if (!response.ok) {
