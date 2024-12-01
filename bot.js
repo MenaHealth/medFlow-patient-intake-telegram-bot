@@ -53,11 +53,11 @@ const handleUserResponse = async (chatId, selectedLanguage) => {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // Add this check
   if (!userStates[chatId]) {
     userStates[chatId] = { languagePromptSent: false };
   }
 
+  // Check if the user has already selected a language
   if (!userStates[chatId]?.language) {
     const languageKey = parseInt(msg.text);
     if (languageKey && languages[languageKey]) {
@@ -65,6 +65,7 @@ bot.on('message', async (msg) => {
       userStates[chatId] = { language: selectedLanguage };
       await handleUserResponse(chatId, selectedLanguage);
     } else if (!userStates[chatId].languagePromptSent) {
+      // Send language prompt if no language is selected
       await sendLanguagePrompt(chatId);
       userStates[chatId].languagePromptSent = true;
     }
@@ -74,36 +75,4 @@ bot.on('message', async (msg) => {
   // Handle other messages if needed
 });
 
-// `/start` command handler
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
-
-  if (userStates[chatId]?.processing) return;
-
-  userStates[chatId] = { processing: true };
-
-  try {
-    if (!userStates[chatId]?.language) {
-      // Instead of calling sendLanguagePrompt, just reset the state
-      userStates[chatId] = { processing: false };
-      return;
-    }
-
-    const selectedLanguage = userStates[chatId].language;
-    const { registration_completed, error: errorMessage } = translations[selectedLanguage];
-    const response = await createOrGetPatient(chatId, selectedLanguage);
-
-    if (response.message) await bot.sendMessage(chatId, registration_completed);
-    if (response.url) await bot.sendMessage(chatId, response.url);
-  } catch (error) {
-    console.error('Error processing patient:', error);
-    const { error: errorMessage } = translations['English']; // Default to English for errors
-    await bot.sendMessage(chatId, errorMessage);
-  } finally {
-    userStates[chatId].processing = false;
-  }
-});
-
 console.log('Bot is running...');
-
-
