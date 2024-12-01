@@ -1,6 +1,7 @@
 // bot.js
 import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
+import translations from './translations.js';
 import { createOrGetPatient } from './API.js';
 
 dotenv.config();
@@ -15,22 +16,31 @@ console.log('Bot pre reqs loaded...');
 
 const bot = new TelegramBot(botToken, { polling: true });
 
-
 console.log('Bot loaded');
+
+// Languages object for prompts
+const languages = {
+  1: 'English',
+  2: 'العربية',
+  3: 'فارسی',
+  4: 'پښتو',
+};
+
+// Initialize user states
+const userStates = {};
 
 // Function to format language option
 const formatLanguageOption = (key, language) => {
-  // For RTL languages, add padding to align right
-  if (['العربية', 'فارسی', 'پښتو'].some(rtl => language.includes(rtl))) {
+  if (['العربية', 'فارسی', 'پښتو'].includes(language)) {
     return `${key}. ${language}`;
   }
-  // For English, align left
   return `${key}. ${language}`;
 };
 
 // Function to send language selection prompt
 const sendLanguagePrompt = async (chatId) => {
-  const message = 'Please select your language by sending the number:\n' +
+  const message =
+      'Please select your language by sending the number:\n' +
       Object.entries(languages)
           .map(([key, language]) => formatLanguageOption(key, language))
           .join('\n');
@@ -38,35 +48,25 @@ const sendLanguagePrompt = async (chatId) => {
   await bot.sendMessage(chatId, message);
 };
 
-// Update your languages object
-const languages = {
-  1: 'English',
-  2: 'العربية (Arabic)',
-  3: 'فارسی (Farsi)',
-  4: 'پښتو (Pashto)'  // Updated to show Pashto text first
-};
-
-// Initialize user states (assuming this is a global object or accessible elsewhere)
-const userStates = {};
-
-// Update message handler to check for numeric input only
+// Bot message handler
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  //const text = msg.text?.trim(); //Removed as per update 1
 
   // Check if language is already selected
   if (!userStates[chatId]?.language) {
-    // Check if input is a number and matches a valid language key
-    const languageKey = parseInt(msg.text); //Update to use msg.text directly
+    const languageKey = parseInt(msg.text);
     if (languageKey && languages[languageKey]) {
       const selectedLanguage = languages[languageKey];
       userStates[chatId] = { ...userStates[chatId], language: selectedLanguage };
-      await bot.sendMessage(chatId, `You selected ${selectedLanguage}. Processing your information...`);
+
+      const { processing } = translations[selectedLanguage];
+      await bot.sendMessage(chatId, processing);
 
       try {
         const response = await createOrGetPatient(chatId, selectedLanguage);
         if (response.message) {
-          await bot.sendMessage(chatId, response.message);
+          const { welcome } = translations[selectedLanguage];
+          await bot.sendMessage(chatId, welcome);
         }
         if (response.url) {
           await bot.sendMessage(chatId, response.url);
@@ -76,15 +76,13 @@ bot.on('message', async (msg) => {
         await bot.sendMessage(chatId, 'Sorry, there was an issue processing your request. Please try again later.');
       }
     } else {
-      // Prompt for language selection
       await sendLanguagePrompt(chatId);
     }
     return;
   }
 
-  // If language is already selected, you can handle other commands or messages here
-  // For example, you might want to check for the /start command
-  const text = msg.text?.trim(); //Added back here to handle /start command
+  // Handle other commands or messages here
+  const text = msg.text?.trim();
   if (text === '/start') {
     if (!userStates[chatId]?.processing) {
       await bot.sendMessage(chatId, "To start or continue the process, please send /start");
@@ -93,6 +91,7 @@ bot.on('message', async (msg) => {
   }
 });
 
+// `/start` command handler
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -110,9 +109,12 @@ bot.onText(/\/start/, async (msg) => {
       return;
     }
 
-    const response = await createOrGetPatient(chatId, userStates[chatId]?.language);
+    const selectedLanguage = userStates[chatId]?.language;
+    const { welcome } = translations[selectedLanguage];
+    const response = await createOrGetPatient(chatId, selectedLanguage);
+
     if (response.message) {
-      await bot.sendMessage(chatId, response.message);
+      await bot.sendMessage(chatId, welcome);
     }
     if (response.url) {
       await bot.sendMessage(chatId, response.url);
@@ -126,7 +128,3 @@ bot.onText(/\/start/, async (msg) => {
 });
 
 console.log('Bot loaded');
-
-
-
-
