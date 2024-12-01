@@ -6,11 +6,6 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
     ? process.env.DEV_PATIENT_FORM_BASE_URL || 'http://localhost:3000'
     : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app';
 
-// Select the appropriate key based on the environment
-const API_KEY = process.env.NODE_ENV === 'development'
-    ? process.env.DEV_TELEGRAM_BOT_KEY
-    : process.env.PROD_TELEGRAM_BOT_KEY;
-
 // Function to create or get patient data
 export async function createOrGetPatient(telegramChatId = null, language = 'english') {
   console.log("API_BASE_URL:", API_BASE_URL);
@@ -29,7 +24,7 @@ export async function createOrGetPatient(telegramChatId = null, language = 'engl
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${encodedApiKey}`,
       },
-      body: JSON.stringify({ chatId: telegramChatId, language }), // Include language in the payload
+      body: JSON.stringify({ chatId: telegramChatId, language }),
     });
 
     if (!response.ok) {
