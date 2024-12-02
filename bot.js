@@ -80,17 +80,17 @@ bot.on('message', async (msg) => {
         timestamp: new Date(msg.date * 1000),
     };
 
-    console.log('Received message:', messageData);
+    console.log("Received message from Telegram:", messageData);
 
     try {
         const apiUrl = `${API_BASE_URL}/api/telegram-bot/${chatId}/save-message`;
 
-        console.log(`Attempting to send message to API URL: ${apiUrl}`);
-        console.log('Message payload:', messageData);
+        console.log(`Sending message to save-message API: ${apiUrl}`);
+        console.log("Message payload:", messageData);
 
         const encodedApiKey = encodeURIComponent(MEDFLOW_BOT_API_KEY);
 
-        console.log('Encoded Authorization Header:', `Bearer ${encodedApiKey}`);
+        console.log("Authorization Header Sent:", `Bearer ${encodedApiKey}`);
 
         const response = await axios.patch(apiUrl, messageData, {
             headers: {
@@ -99,9 +99,9 @@ bot.on('message', async (msg) => {
             },
         });
 
-        console.log(`Response from MedFlow server:`, response.data);
+        console.log("Response from save-message API:", response.data);
     } catch (error) {
-        console.error('Error sending message to MedFlow server:', error.response?.data || error.message);
+        console.error("Error sending message to save-message API:", error.response?.data || error.message);
     }
 });
 
