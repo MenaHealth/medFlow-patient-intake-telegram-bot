@@ -80,10 +80,13 @@ bot.on('message', async (msg) => {
         timestamp: new Date(msg.date * 1000),
     };
 
+    console.log('Received message:', messageData);
+
     try {
         const apiUrl = `${API_BASE_URL}/api/telegram-bot/${chatId}/save-message`;
 
         console.log(`Attempting to send message to API URL: ${apiUrl}`);
+        console.log('Message payload:', messageData);
 
         const encodedApiKey = encodeURIComponent(MEDFLOW_BOT_API_KEY);
 
@@ -96,11 +99,14 @@ bot.on('message', async (msg) => {
             },
         });
 
-        console.log(`Message sent to MedFlow server:`, response.data);
+        console.log(`Response from MedFlow server:`, response.data);
     } catch (error) {
         console.error('Error sending message to MedFlow server:', error.response?.data || error.message);
     }
 });
+
+// Log when the bot starts
+console.log('Telegram Bot is running and polling for messages...');
 
 // Start Bot
 console.log('Telegram Bot is running and polling for messages...');

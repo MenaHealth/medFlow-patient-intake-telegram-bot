@@ -8,15 +8,20 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
 
 // Function to create or get patient data
 export async function createOrGetPatient(telegramChatId = null, language = 'english') {
-  console.log("API_BASE_URL:", API_BASE_URL);
-  console.log("Payload sent to API:", { chatId: telegramChatId, language });
+  console.log('createOrGetPatient called');
+  console.log('API_BASE_URL:', API_BASE_URL);
+  console.log('Payload sent to API:', { chatId: telegramChatId, language });
 
   try {
     const apiKey = process.env.NODE_ENV === 'development'
         ? process.env.DEV_TELEGRAM_BOT_KEY
         : process.env.PROD_TELEGRAM_BOT_KEY;
 
+    console.log('Using API Key:', apiKey);
+
     const encodedApiKey = encodeURIComponent(apiKey);
+
+    console.log('Encoded Authorization Header:', `Bearer ${encodedApiKey}`);
 
     const response = await fetch(`${API_BASE_URL}/api/telegram-bot`, {
       method: 'POST',
@@ -29,11 +34,12 @@ export async function createOrGetPatient(telegramChatId = null, language = 'engl
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Server response:', response.status, errorText);
+      console.error('Error response from API:', response.status, errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Response from API:', data);
 
     if (data.registrationUrl) {
       return {
@@ -48,7 +54,7 @@ export async function createOrGetPatient(telegramChatId = null, language = 'engl
         message: data.message,
       };
     } else {
-      console.error('Unexpected server response:', data);
+      console.error('Unexpected response structure:', data);
       throw new Error('Unexpected response from server');
     }
   } catch (error) {
