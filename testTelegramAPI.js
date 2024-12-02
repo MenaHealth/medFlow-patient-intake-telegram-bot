@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { createOrGetPatient } from './API.js';
+import { createOrGetPatient } from './createPatient.js';
 
 dotenv.config(); // Load environment variables from .env
 

@@ -1,4 +1,4 @@
-// API.js
+// createPatient.js
 import fetch from 'node-fetch';
 
 // Choose base URL dynamically based on the environment
