@@ -95,7 +95,7 @@ bot.on('message', async (msg) => {
         const response = await axios.patch(apiUrl, messageData, {
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${encodedApiKey}`, // Send the encoded key
+                Authorization: `Bearer ${encodedApiKey}`,
             },
         });
 
