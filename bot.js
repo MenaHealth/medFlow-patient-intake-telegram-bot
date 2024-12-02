@@ -1,4 +1,6 @@
 // bot.js
+
+
 import dotenv from 'dotenv';
 import axios from 'axios';
 import TelegramBot from 'node-telegram-bot-api';
@@ -8,25 +10,18 @@ import { createOrGetPatient } from './API.js';
 dotenv.config();
 
 // Determine environment and set bot token
-const botToken = process.env.NODE_ENV === 'development'
-    ? process.env.TELEGRAM_BOT_TOKEN_DEV
-    : process.env.TELEGRAM_BOT_TOKEN;
+const botToken =
+    process.env.NODE_ENV === 'development'
+        ? process.env.TELEGRAM_BOT_TOKEN_DEV
+        : process.env.TELEGRAM_BOT_TOKEN;
+
+if (!botToken) {
+    console.error('Bot token is missing! Please check your environment variables.');
+    process.exit(1);
+}
 
 // Initialize the Telegram Bot
 const bot = new TelegramBot(botToken, { polling: true });
-
-// Set API Base URL based on environment
-const API_BASE_URL =
-    process.env.NODE_ENV === 'development'
-        ? process.env.DEV_PATIENT_FORM_BASE_URL || 'http://localhost:3000'
-        : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app';
-
-const MEDFLOW_BOT_API_KEY =
-    process.env.NODE_ENV === 'development'
-        ? process.env.DEV_TELEGRAM_BOT_KEY
-        : process.env.PROD_TELEGRAM_BOT_KEY;
-
-// console.log(`Selected MEDFLOW_BOT_API_KEY for ${process.env.NODE_ENV}: ${MEDFLOW_BOT_API_KEY}`);
 
 // Supported languages
 const languages = {
@@ -38,75 +33,75 @@ const languages = {
 
 const userStates = {};
 
-// Format language options for the prompt
-const formatLanguageOption = (key, language) => `${key}. ${language}`;
-
 // Send a language selection prompt
 const sendLanguagePrompt = async (chatId) => {
-    const message = Object.entries(languages)
-        .map(([key, language]) => {
-            const { language_prompt } = translations[language];
-            return `${language_prompt}\n${formatLanguageOption(key, language)}`;
-        })
-        .join('\n\n');
-
+    const message = `Please select your language by sending the number:\n\n` +
+        Object.entries(languages)
+            .map(([key, language]) => `${key} = ${language}`)
+            .join('\n');
     await bot.sendMessage(chatId, message);
 };
 
-// Handle user response after language selection
-const handleUserResponse = async (chatId, selectedLanguage) => {
-    const { processing, welcome, error: errorMessage } = translations[selectedLanguage];
+// Handle user language selection
+const handleLanguageSelection = async (chatId, languageKey) => {
+    const selectedLanguage = languages[languageKey];
+    if (!selectedLanguage) {
+        console.log(`Invalid language key received: ${languageKey}`);
+        await bot.sendMessage(chatId, 'Invalid selection. Please try again.');
+        return sendLanguagePrompt(chatId);
+    }
+
+    console.log(`Language selected for chat ID ${chatId}: ${selectedLanguage}`);
+    userStates[chatId] = { language: selectedLanguage }; // Update user state
+
+    const { processing } = translations[selectedLanguage];
     await bot.sendMessage(chatId, processing);
 
     try {
         const response = await createOrGetPatient(chatId, selectedLanguage);
-        if (response.message) await bot.sendMessage(chatId, welcome);
-        if (response.url) await bot.sendMessage(chatId, response.url);
+
+        if (response.type === 'new') {
+            await bot.sendMessage(chatId, response.message); // Raw success message
+            await bot.sendMessage(chatId, response.url); // Registration URL
+        } else if (response.type === 'existing') {
+            await bot.sendMessage(chatId, response.message); // Existing patient message
+        }
     } catch (error) {
-        console.error('Error processing patient:', error);
-        await bot.sendMessage(chatId, errorMessage);
+        console.error('Error during patient registration:', error);
+        await bot.sendMessage(chatId, translations[selectedLanguage].error);
     }
 };
 
-
-// Handle incoming Telegram messages
+// Handle incoming messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id.toString();
+    const text = msg.text?.trim();
 
-    const messageData = {
-        messageId: msg.message_id,
-        text: msg.text || '',
-        sender: msg.from.first_name || 'Unknown',
-        timestamp: new Date(msg.date * 1000),
-    };
+    console.log(`Received message: Chat ID: ${chatId}, Text: ${text}`);
 
-    // console.log("Received message from Telegram:", messageData);
-
-    try {
-        const apiUrl = `${API_BASE_URL}/api/telegram-bot/${chatId}/save-message`;
-
-        // console.log(`Sending message to save-message API: ${apiUrl}`);
-        console.log("Message payload:", messageData);
-
-        const encodedApiKey = encodeURIComponent(MEDFLOW_BOT_API_KEY);
-
-        // console.log("Authorization Header Sent:", `Bearer ${encodedApiKey}`);
-
-        const response = await axios.patch(apiUrl, messageData, {
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${encodedApiKey}`,
-            },
-        });
-
-        // console.log("Response from save-message API:", response.data);
-    } catch (error) {
-        // console.error("Error sending message to save-message API:", error.response?.data || error.message);
+    // Handle language selection
+    if (!userStates[chatId]) {
+        if (Object.keys(languages).includes(text)) {
+            console.log(`Valid language selection: ${text}`);
+            return handleLanguageSelection(chatId, text);
+        } else {
+            console.log('Invalid language selection, prompting again.');
+            return sendLanguagePrompt(chatId);
+        }
     }
+
+    const userState = userStates[chatId];
+    console.log('Current user state:', userState);
+
+    // Handle other inputs after language selection
+    if (text === '9') {
+        console.log('Emergency follow-up received.');
+        return bot.sendMessage(chatId, translations[userState.language].prompts.follow_up);
+    }
+
+    console.log('Unhandled message, sending default response.');
+    return bot.sendMessage(chatId, translations[userState.language].prompts.additional_message);
 });
 
 // Log when the bot starts
-// console.log('Telegram Bot is running and polling for messages...');
-
-// Start Bot
 console.log('Telegram Bot is running and polling for messages...');
