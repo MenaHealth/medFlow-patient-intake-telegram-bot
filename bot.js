@@ -8,8 +8,9 @@ import { createOrGetPatient } from './API.js';
 dotenv.config();
 
 // Determine environment and set bot token
-const isTesting = process.env.NODE_ENV === 'development';
-const botToken = isTesting ? process.env.TELEGRAM_BOT_TOKEN_DEV : process.env.TELEGRAM_BOT_TOKEN;
+const botToken = process.env.NODE_ENV === 'development'
+    ? process.env.TELEGRAM_BOT_TOKEN_DEV
+    : process.env.TELEGRAM_BOT_TOKEN;
 
 // Initialize the Telegram Bot
 const bot = new TelegramBot(botToken, { polling: true });
