@@ -20,6 +20,36 @@ if (!botToken) {
     process.exit(1);
 }
 
+const API_BASE_URL =
+    process.env.NODE_ENV === 'development'
+        ? process.env.DEV_PATIENT_FORM_BASE_URL
+        : process.env.PATIENT_FORM_BASE_URL;
+
+if (!API_BASE_URL) {
+    console.error('API_BASE_URL is missing! Please check your environment variables.');
+    process.exit(1);
+}
+
+const TELEGRAM_BOT_KEY =
+    process.env.NODE_ENV === 'development'
+        ? process.env.DEV_TELEGRAM_BOT_KEY
+        : process.env.PROD_TELEGRAM_BOT_KEY;
+
+if (!TELEGRAM_BOT_KEY) {
+    console.error('TELEGRAM_BOT_KEY is missing! Please check your environment variables.');
+    process.exit(1);
+}
+
+console.log("Loaded Environment Variables:");
+console.log({
+    NODE_ENV: process.env.NODE_ENV,
+    TELEGRAM_BOT_TOKEN: botToken,
+    API_BASE_URL,
+    TELEGRAM_BOT_KEY,
+});
+
+
+
 // Initialize the Telegram Bot
 const bot = new TelegramBot(botToken, { polling: true });
 
@@ -76,31 +106,61 @@ const handleLanguageSelection = async (chatId, languageKey) => {
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id.toString();
     const text = msg.text?.trim();
+    const timestamp = new Date();
 
-    console.log(`Received message: Chat ID: ${chatId}, Text: ${text}`);
+    // Log the incoming message
+    console.log("Received message:", { chatId, text, timestamp });
 
-    // Handle language selection
-    if (!userStates[chatId]) {
-        if (Object.keys(languages).includes(text)) {
-            console.log(`Valid language selection: ${text}`);
-            return handleLanguageSelection(chatId, text);
+    try {
+        // Step 1: Attempt to save the message to the thread
+        const saveMessageResponse = await axios.patch(
+            `${API_BASE_URL}/api/telegram-bot/${chatId}/save-message`,
+            {
+                text,
+                sender: "patient",
+                timestamp,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${encodeURIComponent(TELEGRAM_BOT_KEY)}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        console.log("Save message response:", saveMessageResponse.data);
+
+        // Step 2: If the thread doesn't exist, trigger patient registration
+        if (saveMessageResponse.data.status === "ThreadNotFound") {
+            console.log("Thread not found. Initiating patient registration.");
+
+            const language = userStates[chatId]?.language || "english";
+            const registrationResponse = await createOrGetPatient(chatId, language);
+
+            if (registrationResponse.type === "new") {
+                await bot.sendMessage(chatId, registrationResponse.message);
+                await bot.sendMessage(chatId, registrationResponse.url);
+            } else if (registrationResponse.type === "existing") {
+                await bot.sendMessage(chatId, registrationResponse.message);
+            }
+        }
+    } catch (error) {
+        // Step 3: Handle errors during saving or registration
+        console.error("Error handling incoming message:");
+        console.error("Error Message:", error.message);
+        if (error.response) {
+            console.error("Response Status:", error.response.status);
+            console.error("Response Data:", error.response.data);
         } else {
-            console.log('Invalid language selection, prompting again.');
+            console.error("No response received from API.");
+        }
+
+        // Fallback: Send a language selection prompt if no state exists
+        if (!userStates[chatId]) {
+            console.log("No user state found. Sending language selection prompt.");
             return sendLanguagePrompt(chatId);
         }
     }
-
-    const userState = userStates[chatId];
-    console.log('Current user state:', userState);
-
-    // Handle other inputs after language selection
-    if (text === '9') {
-        console.log('Emergency follow-up received.');
-        return bot.sendMessage(chatId, translations[userState.language].prompts.follow_up);
-    }
-
-    console.log('Unhandled message, sending default response.');
-    return bot.sendMessage(chatId, translations[userState.language].prompts.additional_message);
 });
 
 // Log when the bot starts
