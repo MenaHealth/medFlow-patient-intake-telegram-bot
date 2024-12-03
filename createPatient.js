@@ -6,6 +6,25 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
     ? process.env.DEV_PATIENT_FORM_BASE_URL || 'http://localhost:3000'
     : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app';
 
+// Translations for language prompt
+const languagePromptMessage = `
+Please select your language by sending the number:
+
+1 = English
+2 = العربية
+3 = فارسی
+4 = پښتو
+
+(2 = Arabic / 3 = Farsi / 4 = Pashto)
+`;
+
+const languages = {
+  1: "English",
+  2: "Arabic",
+  3: "Farsi",
+  4: "Pashto",
+};
+
 // Function to create or get patient data
 export async function createOrGetPatient(telegramChatId = null, language = 'english') {
   console.log('Payload sent to API:', { chatId: telegramChatId, language });
@@ -27,7 +46,6 @@ export async function createOrGetPatient(telegramChatId = null, language = 'engl
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Server response:', response.status, errorText);
-
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -52,3 +70,5 @@ export async function createOrGetPatient(telegramChatId = null, language = 'engl
     throw error;
   }
 }
+
+export { languagePromptMessage, languages };
