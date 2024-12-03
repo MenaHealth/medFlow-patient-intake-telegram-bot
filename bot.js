@@ -3,9 +3,9 @@
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import { languagePromptMessage, languages } from "./utils/languagePrompt.js";
-import { createOrGetPatient } from "./createPatient.js";
 import { saveMessage } from "./saveMessage.js";
-import translations from "./translations.js";
+import { saveTelegramThread } from "./saveTelegramThread.js";
+import { createPatient } from "./createPatient.js";
 
 dotenv.config();
 
@@ -49,7 +49,13 @@ bot.on("message", async (msg) => {
 
     // Check if the user has an existing state
     if (!userStates[chatId]) {
-        console.log(`[INFO] No user state for chat ID ${chatId}. Sending language prompt.`);
+        console.log(`[INFO] No user state for chat ID ${chatId}. Saving Telegram thread and sending language prompt.`);
+        try {
+            await saveTelegramThread(chatId, "en");
+        } catch (error) {
+            console.error(`[ERROR] Failed to save Telegram thread for chat ID ${chatId}:`, error);
+        }
+
         await sendLanguagePrompt(chatId);
         userStates[chatId] = { language: null }; // Initialize the user state without a language
         return;
@@ -59,24 +65,25 @@ bot.on("message", async (msg) => {
 
     if (!userState.language) {
         console.log(`[INFO] Processing language selection for chat ID ${chatId}`);
-        const languageKey = text;
+        const languageKey = parseInt(text); // Convert the response to an integer
 
-        const selectedLanguage = languages[languageKey];
+        const selectedLanguageMap = {
+            1: "English",
+            2: "Arabic",
+            3: "Farsi",
+            4: "Pashto",
+        };
+
+        const selectedLanguage = selectedLanguageMap[languageKey];
         if (selectedLanguage) {
             userStates[chatId].language = selectedLanguage;
 
             try {
-                const response = await createOrGetPatient(chatId, selectedLanguage);
-
-                if (response.type === "new") {
-                    await bot.sendMessage(chatId, response.message);
-                    await bot.sendMessage(chatId, response.url);
-                } else if (response.type === "existing") {
-                    await bot.sendMessage(chatId, response.message);
-                }
+                // Call the new-patient API to create a patient with the selected language
+                await createPatient(chatId, selectedLanguage);
             } catch (error) {
-                console.error(`[ERROR] Failed to process patient registration for chat ID ${chatId}:`, error);
-                await bot.sendMessage(chatId, translations[selectedLanguage]?.error || "An error occurred. Please try again later.");
+                console.error(`[ERROR] Failed to process patient creation for chat ID ${chatId}:`, error);
+                await bot.sendMessage(chatId, "An error occurred. Please try again later.");
             }
         } else {
             console.warn(`[WARN] Invalid language key "${languageKey}" for chat ID ${chatId}`);

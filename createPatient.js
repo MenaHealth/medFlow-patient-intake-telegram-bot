@@ -1,74 +1,31 @@
 // createPatient.js
-import fetch from 'node-fetch';
+import fetch from "node-fetch";
 
-// Choose base URL dynamically based on the environment
-const API_BASE_URL = process.env.NODE_ENV === 'development'
-    ? process.env.DEV_PATIENT_FORM_BASE_URL || 'http://localhost:3000'
-    : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app';
+const API_BASE_URL = process.env.NODE_ENV === "development"
+    ? process.env.DEV_PATIENT_FORM_BASE_URL || "http://localhost:3000"
+    : process.env.PATIENT_FORM_BASE_URL || "https://medflow-mena-health.vercel.app";
 
-// Translations for language prompt
-const languagePromptMessage = `
-Please select your language by sending the number:
-
-1 = English
-2 = العربية
-3 = فارسی
-4 = پښتو
-
-(2 = Arabic / 3 = Farsi / 4 = Pashto)
-`;
-
-const languages = {
-  1: "English",
-  2: "Arabic",
-  3: "Farsi",
-  4: "Pashto",
-};
-
-// Function to create or get patient data
-export async function createOrGetPatient(telegramChatId = null, language = 'english') {
-  console.log('Payload sent to API:', { chatId: telegramChatId, language });
-
+export async function createPatient(telegramChatId, language = "en") {
   try {
-    const apiKey = process.env.NODE_ENV === 'development'
-        ? process.env.DEV_TELEGRAM_BOT_KEY
-        : process.env.PROD_TELEGRAM_BOT_KEY;
-
-    const response = await fetch(`${API_BASE_URL}/api/telegram-bot/${telegramChatId}/post`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/api/telegram-bot/${telegramChatId}/new-patient`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${encodeURIComponent(apiKey)}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ telegramChatId, language }),
+      body: JSON.stringify({ language }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Server response:', response.status, errorText);
+      console.error(`[ERROR] Failed to create patient:`, errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-
-    if (data.registrationUrl) {
-      return {
-        type: 'new',
-        url: data.registrationUrl,
-        message: data.message, // The raw success message
-      };
-    } else if (data.patientDashboardUrl) {
-      return {
-        type: 'existing',
-        message: data.message, // Existing patient message
-      };
-    } else {
-      throw new Error('Unexpected response from server');
-    }
+    console.log(`[INFO] Patient created:`, data);
+    return data;
   } catch (error) {
-    console.error('Error in createOrGetPatient:', error);
+    console.error(`[ERROR] Failed to create patient:`, error);
     throw error;
   }
 }
-
-export { languagePromptMessage, languages };
