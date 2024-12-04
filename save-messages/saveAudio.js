@@ -1,8 +1,8 @@
 // save-messages/saveAudio.js
 import dotenv from "dotenv";
-dotenv.config(); // Load environment variables
+dotenv.config();
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import fetch from "node-fetch";
+import axios from "axios";
 
 // Base URL for the API
 const API_BASE_URL = process.env.NODE_ENV === "development"
@@ -51,12 +51,9 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
     console.log('API Key:', apiKey);
 
     try {
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-            throw new Error("Failed to fetch audio file from Telegram");
-        }
-        const buffer = await response.arrayBuffer();
-        const s3Url = await uploadAudioToS3(telegramChatId, Buffer.from(buffer), timestamp);
+        const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(response.data);
+        const s3Url = await uploadAudioToS3(telegramChatId, buffer, timestamp);
 
         const requestBody = {
             text: "Audio Message",
@@ -68,29 +65,22 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
 
         console.log('Request Body:', requestBody);
 
-        const responseFromAPI = await fetch(
+        const responseFromAPI = await axios.patch(
             `${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`,
+            requestBody,
             {
-                method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${encodeURIComponent(apiKey)}`,
                 },
-                body: JSON.stringify(requestBody),
             }
         );
 
-        if (!responseFromAPI.ok) {
-            const errorText = await responseFromAPI.text();
-            console.error(`[ERROR] Failed to save audio message for chat ID ${telegramChatId}:`, errorText);
-            throw new Error(`HTTP error! status: ${responseFromAPI.status}`);
-        }
-
-        const data = await responseFromAPI.json();
-        console.log(`[INFO] Audio message saved successfully for chat ID ${telegramChatId}:`, data);
-        return data;
+        console.log(`[INFO] Audio message saved successfully for chat ID ${telegramChatId}:`, responseFromAPI.data);
+        return responseFromAPI.data;
     } catch (error) {
         console.error(`[ERROR] Failed to save audio message for chat ID ${telegramChatId}:`, error);
         throw error;
     }
 }
+
