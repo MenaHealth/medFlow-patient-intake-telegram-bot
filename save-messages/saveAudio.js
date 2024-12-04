@@ -48,8 +48,6 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
         ? process.env.DEV_TELEGRAM_BOT_KEY
         : process.env.PROD_TELEGRAM_BOT_KEY;
 
-    console.log('API Key:', apiKey);
-
     try {
         const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
