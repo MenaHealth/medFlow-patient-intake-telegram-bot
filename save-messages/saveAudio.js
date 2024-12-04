@@ -58,13 +58,15 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
         const buffer = Buffer.from(await response.arrayBuffer());
         const s3Url = await uploadAudioToS3(telegramChatId, buffer, timestamp);
 
-        console.log('Request Body:', {
+        const requestBody = JSON.stringify({
             text: "Audio Message",
             sender,
             timestamp: timestamp.toISOString(),
             type: "audio",
             mediaUrl: s3Url,
         });
+
+        console.log('Request Body (stringified):', requestBody);
 
         const responseFromAPI = await fetch(
             `${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`,
@@ -74,13 +76,7 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${encodeURIComponent(apiKey)}`,
                 },
-                body: JSON.stringify({
-                    text: "Audio Message",
-                    sender,
-                    timestamp: timestamp.toISOString(),
-                    type: "audio",
-                    mediaUrl: s3Url,
-                }),
+                body: requestBody,
             }
         );
 
