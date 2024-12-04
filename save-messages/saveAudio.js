@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 dotenv.config();
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import axios from "axios";
+import ffmpeg from "fluent-ffmpeg";
+import { Readable } from "stream";
+import { PassThrough } from "stream";
 
 // Base URL for the API
 const API_BASE_URL = process.env.NODE_ENV === "development"
@@ -18,16 +21,39 @@ const s3 = new S3Client({
     },
 });
 
+// Function to convert OGG to MP3
+async function convertOggToMp3(buffer) {
+    return new Promise((resolve, reject) => {
+        const inputStream = new Readable();
+        inputStream.push(buffer);
+        inputStream.push(null); // Signal end of the stream
+
+        const outputStream = new PassThrough();
+        const chunks = [];
+
+        outputStream.on("data", (chunk) => chunks.push(chunk));
+        outputStream.on("end", () => resolve(Buffer.concat(chunks)));
+        outputStream.on("error", reject);
+
+        ffmpeg(inputStream)
+            .inputFormat("ogg")
+            .audioCodec("libmp3lame")
+            .format("mp3")
+            .on("error", (err) => reject(err))
+            .pipe(outputStream, { end: true });
+    });
+}
+
 // Function to upload audio to S3
-async function uploadAudioToS3(chatId, buffer, timestamp) {
-    const key = `audio/${chatId}/${timestamp.toISOString()}.ogg`;
+async function uploadAudioToS3(chatId, buffer, timestamp, format = "mp3") {
+    const key = `audio/${chatId}/${timestamp.toISOString()}.${format}`;
 
     try {
         const command = new PutObjectCommand({
             Bucket: process.env.AWS_S3_AUDIO_BUCKET,
             Key: key,
             Body: buffer,
-            ContentType: "audio/ogg",
+            ContentType: `audio/${format}`,
         });
 
         await s3.send(command);
@@ -49,10 +75,19 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
         : process.env.PROD_TELEGRAM_BOT_KEY;
 
     try {
+        // Fetch the OGG file from the provided URL
         const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        const s3Url = await uploadAudioToS3(telegramChatId, buffer, timestamp);
+        const oggBuffer = Buffer.from(response.data);
 
+        // Convert OGG to MP3
+        console.log("[INFO] Converting OGG to MP3...");
+        const mp3Buffer = await convertOggToMp3(oggBuffer);
+
+        // Upload MP3 to S3
+        console.log("[INFO] Uploading MP3 to S3...");
+        const s3Url = await uploadAudioToS3(telegramChatId, mp3Buffer, timestamp, "mp3");
+
+        // Save the MP3 URL as a message in your backend
         const requestBody = {
             text: "Audio Message",
             sender,
@@ -81,4 +116,3 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
         throw error;
     }
 }
-
