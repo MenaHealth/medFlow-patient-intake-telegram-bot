@@ -44,33 +44,27 @@ async function uploadAudioToS3(chatId, buffer, timestamp) {
 export async function saveAudio(telegramChatId, fileUrl, sender = "patient", timestamp = new Date()) {
     console.log(`[DEBUG] Saving audio message for chat ID ${telegramChatId}`);
 
-    console.log('API_BASE_URL:', API_BASE_URL);
+    const apiKey = process.env.NODE_ENV === "development"
+        ? process.env.DEV_TELEGRAM_BOT_KEY
+        : process.env.PROD_TELEGRAM_BOT_KEY;
+
     console.log('API Key:', apiKey);
 
     try {
-
-        console.log('Request Body:', {
-            text: "Audio Message",
-            sender,
-            timestamp,
-            type: "audio",
-            mediaUrl: s3Url,
-        });
-
-        // Fetch the audio file from Telegram
         const response = await fetch(fileUrl);
         if (!response.ok) {
             throw new Error("Failed to fetch audio file from Telegram");
         }
         const buffer = Buffer.from(await response.arrayBuffer());
-
-        // Upload the file to S3
         const s3Url = await uploadAudioToS3(telegramChatId, buffer, timestamp);
 
-        // Send the S3 URL to the API
-        const apiKey = process.env.NODE_ENV === "development"
-            ? process.env.DEV_TELEGRAM_BOT_KEY
-            : process.env.PROD_TELEGRAM_BOT_KEY;
+        console.log('Request Body:', {
+            text: "Audio Message",
+            sender,
+            timestamp: timestamp.toISOString(),
+            type: "audio",
+            mediaUrl: s3Url,
+        });
 
         const responseFromAPI = await fetch(
             `${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`,
@@ -81,11 +75,11 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
                     Authorization: `Bearer ${encodeURIComponent(apiKey)}`,
                 },
                 body: JSON.stringify({
-                    text: "Audio Message", // Placeholder text for audio messages
+                    text: "Audio Message",
                     sender,
-                    timestamp,
+                    timestamp: timestamp.toISOString(),
                     type: "audio",
-                    mediaUrl: s3Url, // Pass the S3 URL as mediaUrl
+                    mediaUrl: s3Url,
                 }),
             }
         );
