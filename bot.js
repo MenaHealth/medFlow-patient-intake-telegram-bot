@@ -3,9 +3,11 @@
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import { languagePromptMessage, languages } from "./utils/languagePrompt.js";
-import { saveMessage } from "./saveMessage.js";
 import { saveTelegramThread } from "./saveTelegramThread.js";
 import { createPatient } from "./createPatient.js";
+import {saveText} from "./save-messages/saveText.js";
+import {saveAudio} from "./save-messages/saveAudio.js";
+import {saveImage} from "./save-messages/saveImages.js";
 
 dotenv.config();
 
@@ -35,17 +37,59 @@ const sendLanguagePrompt = async (chatId) => {
 // Handle incoming messages
 bot.on("message", async (msg) => {
     const chatId = msg.chat.id.toString();
-    const text = msg.text?.trim();
     const timestamp = new Date();
 
-    console.log(`[DEBUG] Received message from chat ID ${chatId}: "${text}"`);
+    if (msg.photo) {
+        const fileId = msg.photo[msg.photo.length - 1].file_id; // Get the highest resolution image
+        const caption = msg.caption?.trim() || ""; // Get the caption if it exists
 
-    // Save the incoming message to the API
-    try {
-        await saveMessage(chatId, text, "patient", timestamp);
-    } catch (error) {
-        console.error(`[ERROR] Failed to save message for chat ID ${chatId}:`, error);
+        try {
+            // Get the file URL from Telegram
+            const fileInfo = await bot.getFile(fileId);
+            const fileUrl = `https://api.telegram.org/file/bot${botToken}/${fileInfo.file_path}`;
+
+            console.log(`[INFO] Received image message for chat ID ${chatId}: ${fileUrl}, caption: "${caption}"`);
+
+            // Save the image message
+            await saveImage(chatId, fileUrl, "patient", timestamp, caption);
+        } catch (error) {
+            console.error(`[ERROR] Failed to process image message for chat ID ${chatId}:`, error);
+        }
+
+        return;
     }
+
+    // Check if the message contains audio or voice
+    if (msg.audio || msg.voice) {
+        const fileId = msg.audio?.file_id || msg.voice?.file_id;
+
+        try {
+            // Get the file URL from Telegram
+            const fileInfo = await bot.getFile(fileId);
+            const fileUrl = `https://api.telegram.org/file/bot${botToken}/${fileInfo.file_path}`;
+
+            console.log(`[INFO] Received audio message for chat ID ${chatId}: ${fileUrl}`);
+
+            // Save the audio message
+            await saveAudio(chatId, fileUrl, "patient", timestamp);
+        } catch (error) {
+            console.error(`[ERROR] Failed to process audio message for chat ID ${chatId}:`, error);
+        }
+
+        return;
+    }
+
+    // Handle text messages as before
+    const text = msg.text?.trim();
+    if (text) {
+        try {
+            await saveText(chatId, text, "patient", timestamp);
+        } catch (error) {
+            console.error(`[ERROR] Failed to save text message for chat ID ${chatId}:`, error);
+        }
+    }
+
+    console.log(`[DEBUG] Received message from chat ID ${chatId}: "${text}"`);
 
     // Check if the user has an existing state
     if (!userStates[chatId]) {
