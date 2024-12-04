@@ -1,5 +1,4 @@
-// saveMessage.js
-
+// save-messages/saveText.js
 
 import fetch from 'node-fetch';
 
@@ -9,7 +8,7 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
     : process.env.PATIENT_FORM_BASE_URL || 'https://medflow-mena-health.vercel.app';
 
 // Function to save a message to the API
-export async function saveMessage(telegramChatId, text, sender = 'patient', timestamp = new Date()) {
+export async function saveText(telegramChatId, text, sender = 'patient', timestamp = new Date()) {
     console.log(`[DEBUG] Saving message for chat ID ${telegramChatId}: "${text}"`);
 
     try {
