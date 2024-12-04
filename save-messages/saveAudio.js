@@ -1,4 +1,4 @@
-    // save-messages/saveAudio.js
+// save-messages/saveAudio.js
 import dotenv from "dotenv";
 dotenv.config(); // Load environment variables
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -44,7 +44,19 @@ async function uploadAudioToS3(chatId, buffer, timestamp) {
 export async function saveAudio(telegramChatId, fileUrl, sender = "patient", timestamp = new Date()) {
     console.log(`[DEBUG] Saving audio message for chat ID ${telegramChatId}`);
 
+    console.log('API_BASE_URL:', API_BASE_URL);
+    console.log('API Key:', apiKey);
+
     try {
+
+        console.log('Request Body:', {
+            text: "Audio Message",
+            sender,
+            timestamp,
+            type: "audio",
+            mediaUrl: s3Url,
+        });
+
         // Fetch the audio file from Telegram
         const response = await fetch(fileUrl);
         if (!response.ok) {
