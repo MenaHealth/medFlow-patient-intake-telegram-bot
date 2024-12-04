@@ -55,18 +55,18 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
         if (!response.ok) {
             throw new Error("Failed to fetch audio file from Telegram");
         }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        const s3Url = await uploadAudioToS3(telegramChatId, buffer, timestamp);
+        const buffer = await response.arrayBuffer();
+        const s3Url = await uploadAudioToS3(telegramChatId, Buffer.from(buffer), timestamp);
 
-        const requestBody = JSON.stringify({
+        const requestBody = {
             text: "Audio Message",
             sender,
             timestamp: timestamp.toISOString(),
             type: "audio",
             mediaUrl: s3Url,
-        });
+        };
 
-        console.log('Request Body (stringified):', requestBody);
+        console.log('Request Body:', requestBody);
 
         const responseFromAPI = await fetch(
             `${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`,
@@ -76,7 +76,7 @@ export async function saveAudio(telegramChatId, fileUrl, sender = "patient", tim
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${encodeURIComponent(apiKey)}`,
                 },
-                body: requestBody,
+                body: JSON.stringify(requestBody),
             }
         );
 
