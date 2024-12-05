@@ -1,26 +1,34 @@
 // bot.js
 
+// bot.js
+
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
-import { languagePromptMessage, languages } from "./utils/languagePrompt.js";
+import { languagePromptMessage } from "./utils/languagePrompt.js";
 import { saveTelegramThread } from "./saveTelegramThread.js";
 import { createPatient } from "./createPatient.js";
-import {saveText} from "./save-messages/saveText.js";
-import {saveAudio} from "./save-messages/saveAudio.js";
-import {saveImage} from "./save-messages/saveImages.js";
+import { saveText } from "./save-messages/saveText.js";
+import { saveAudio } from "./save-messages/saveAudio.js";
+import { saveImage } from "./save-messages/saveImages.js";
 
 dotenv.config();
 
-const botToken =
-    process.env.NODE_ENV === "development"
-        ? process.env.TELEGRAM_BOT_TOKEN_DEV
-        : process.env.TELEGRAM_BOT_TOKEN;
+// Load environment variables
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const MEDFLOW_KEY = process.env.MEDFLOW_KEY;
 
+// Validate the required environment variables
 if (!botToken) {
-    console.error("Bot token is missing! Please check your environment variables.");
+    console.error("[ERROR] Bot token is missing! Please check your environment variables.");
     process.exit(1);
 }
 
+if (!MEDFLOW_KEY) {
+    console.error("[ERROR] MEDFLOW_KEY is missing! Please check your environment variables.");
+    process.exit(1);
+}
+
+// Initialize the Telegram bot
 const bot = new TelegramBot(botToken, { polling: true });
 const userStates = {}; // Store user states by chat ID
 
@@ -40,18 +48,16 @@ bot.on("message", async (msg) => {
     const timestamp = new Date();
 
     if (msg.photo) {
-        const fileId = msg.photo[msg.photo.length - 1].file_id; // Get the highest resolution image
-        const caption = msg.caption?.trim() || ""; // Get the caption if it exists
+        const fileId = msg.photo[msg.photo.length - 1].file_id;
+        const caption = msg.caption?.trim() || "";
 
         try {
-            // Get the file URL from Telegram
             const fileInfo = await bot.getFile(fileId);
             const fileUrl = `https://api.telegram.org/file/bot${botToken}/${fileInfo.file_path}`;
 
             console.log(`[INFO] Received image message for chat ID ${chatId}: ${fileUrl}, caption: "${caption}"`);
 
-            // Save the image message
-            await saveImage(chatId, fileUrl, "patient", timestamp, caption);
+            await saveImage(chatId, fileUrl, "patient", timestamp, caption, MEDFLOW_KEY);
         } catch (error) {
             console.error(`[ERROR] Failed to process image message for chat ID ${chatId}:`, error);
         }
@@ -59,19 +65,16 @@ bot.on("message", async (msg) => {
         return;
     }
 
-    // Check if the message contains audio or voice
     if (msg.audio || msg.voice) {
         const fileId = msg.audio?.file_id || msg.voice?.file_id;
 
         try {
-            // Get the file URL from Telegram
             const fileInfo = await bot.getFile(fileId);
             const fileUrl = `https://api.telegram.org/file/bot${botToken}/${fileInfo.file_path}`;
 
             console.log(`[INFO] Received audio message for chat ID ${chatId}: ${fileUrl}`);
 
-            // Save the audio message
-            await saveAudio(chatId, fileUrl, "patient", timestamp);
+            await saveAudio(chatId, fileUrl, "patient", timestamp, MEDFLOW_KEY);
         } catch (error) {
             console.error(`[ERROR] Failed to process audio message for chat ID ${chatId}:`, error);
         }
@@ -79,11 +82,10 @@ bot.on("message", async (msg) => {
         return;
     }
 
-    // Handle text messages as before
     const text = msg.text?.trim();
     if (text) {
         try {
-            await saveText(chatId, text, "patient", timestamp);
+            await saveText(chatId, text, "patient", timestamp, MEDFLOW_KEY);
         } catch (error) {
             console.error(`[ERROR] Failed to save text message for chat ID ${chatId}:`, error);
         }
@@ -91,17 +93,16 @@ bot.on("message", async (msg) => {
 
     console.log(`[DEBUG] Received message from chat ID ${chatId}: "${text}"`);
 
-    // Check if the user has an existing state
     if (!userStates[chatId]) {
         console.log(`[INFO] No user state for chat ID ${chatId}. Saving Telegram thread and sending language prompt.`);
         try {
-            await saveTelegramThread(chatId, "en");
+            await saveTelegramThread(chatId, "en", MEDFLOW_KEY);
         } catch (error) {
             console.error(`[ERROR] Failed to save Telegram thread for chat ID ${chatId}:`, error);
         }
 
         await sendLanguagePrompt(chatId);
-        userStates[chatId] = { language: null }; // Initialize the user state without a language
+        userStates[chatId] = { language: null };
         return;
     }
 
@@ -109,7 +110,7 @@ bot.on("message", async (msg) => {
 
     if (!userState.language) {
         console.log(`[INFO] Processing language selection for chat ID ${chatId}`);
-        const languageKey = parseInt(text); // Convert the response to an integer
+        const languageKey = parseInt(text);
 
         const selectedLanguageMap = {
             1: "English",
@@ -123,8 +124,7 @@ bot.on("message", async (msg) => {
             userStates[chatId].language = selectedLanguage;
 
             try {
-                // Call the new-patient API to create a patient with the selected language
-                await createPatient(chatId, selectedLanguage);
+                await createPatient(chatId, selectedLanguage, MEDFLOW_KEY);
             } catch (error) {
                 console.error(`[ERROR] Failed to process patient creation for chat ID ${chatId}:`, error);
                 await bot.sendMessage(chatId, "An error occurred. Please try again later.");

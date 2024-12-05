@@ -2,17 +2,18 @@
 
 import fetch from "node-fetch";
 
-const API_BASE_URL = process.env.NODE_ENV === "development"
-    ? process.env.DEV_PATIENT_FORM_BASE_URL || "http://localhost:3000"
-    : process.env.PATIENT_FORM_BASE_URL || "https://medflow-mena-health.vercel.app";
+const API_BASE_URL = process.env.API_BASE_URL;
 
 // Function to save a Telegram thread to the API
-export async function saveTelegramThread(telegramChatId, language = "en") {
+export async function saveTelegramThread(telegramChatId, language = "en", medflowKey) {
+    console.log(`[DEBUG] Saving Telegram thread for chat ID ${telegramChatId} with language "${language}"`);
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/telegram-bot/new-thread`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${encodeURIComponent(medflowKey)}`,
             },
             body: JSON.stringify({ telegramChatId, language }),
         });
@@ -24,7 +25,7 @@ export async function saveTelegramThread(telegramChatId, language = "en") {
         }
 
         const data = await response.json();
-        console.log(`[INFO] Telegram thread saved:`, data);
+        console.log(`[INFO] Telegram thread saved successfully:`, data);
         return data;
     } catch (error) {
         console.error(`[ERROR] Failed to save Telegram thread:`, error);
