@@ -1,7 +1,11 @@
 // createPatient.js
 import fetch from "node-fetch";
 
+import dotenv from "dotenv";
+dotenv.config();
+
 const API_BASE_URL = process.env.API_BASE_URL;
+
 
 export async function createPatient(telegramChatId, language = "en", medflowKey) {
   console.log(`[DEBUG] Creating patient for chat ID ${telegramChatId} with language "${language}"`);

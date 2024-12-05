@@ -1,6 +1,7 @@
 // save-messages/saveAudio.js
 import fetch from "node-fetch";
-
+import dotenv from "dotenv";
+dotenv.config();
 const API_BASE_URL = process.env.API_BASE_URL;
 
 export async function saveAudio(telegramChatId, audioUrl, sender = "patient", timestamp = new Date(), medflowKey) {
@@ -13,7 +14,12 @@ export async function saveAudio(telegramChatId, audioUrl, sender = "patient", ti
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${encodeURIComponent(medflowKey)}`,
             },
-            body: JSON.stringify({ mediaUrl: audioUrl, sender, timestamp, type: "audio" }),
+            body: JSON.stringify({
+                mediaUrl: audioUrl,
+                sender,
+                timestamp: timestamp.toISOString(),
+                type: "audio", // Ensure the correct type is passed
+            }),
         });
 
         if (!response.ok) {

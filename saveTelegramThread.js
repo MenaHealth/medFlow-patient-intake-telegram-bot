@@ -2,7 +2,9 @@
 
 import fetch from "node-fetch";
 
-const API_BASE_URL = process.env.API_BASE_URL;
+import dotenv from "dotenv";
+dotenv.config();const API_BASE_URL = process.env.API_BASE_URL;
+
 
 // Function to save a Telegram thread to the API
 export async function saveTelegramThread(telegramChatId, language = "en", medflowKey) {

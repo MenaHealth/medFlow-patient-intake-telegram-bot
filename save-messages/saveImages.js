@@ -44,14 +44,14 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
         const imageBuffer = Buffer.from(imageResponse.data);
         const imageUrl = await uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp);
 
-        const botApiKey = process.env.TELEGRAM_BOT_TOKEN;
+        const botApiKey = process.env.MEDFLOW_KEY;
 
         const messagePayload = {
-            text: caption || "Image Message",
+            text: caption || "Image Message", // Include caption as text
             sender,
             timestamp: uploadTimestamp.toISOString(),
-            type: "image",
-            mediaUrl: imageUrl,
+            type: "image", // Ensure the correct type is passed
+            mediaUrl: imageUrl, // URL of the uploaded image
         };
 
         const apiResponse = await axios.patch(

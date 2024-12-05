@@ -2,7 +2,11 @@
 
 import fetch from "node-fetch";
 
-const API_BASE_URL = process.env.API_BASE_URL;
+import dotenv from "dotenv";
+dotenv.config();
+
+dotenv.config();const API_BASE_URL = process.env.API_BASE_URL;
+
 
 export async function saveText(telegramChatId, text, sender = "patient", timestamp = new Date(), medflowKey) {
     console.log(`[DEBUG] Saving message for chat ID ${telegramChatId}: "${text}"`);
@@ -14,7 +18,12 @@ export async function saveText(telegramChatId, text, sender = "patient", timesta
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${encodeURIComponent(medflowKey)}`,
             },
-            body: JSON.stringify({ text, sender, timestamp }),
+            body: JSON.stringify({
+                text,
+                sender,
+                timestamp,
+                type: "text", // Add the type explicitly
+            }),
         });
 
         if (!response.ok) {
