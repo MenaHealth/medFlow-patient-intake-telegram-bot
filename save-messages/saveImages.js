@@ -24,10 +24,12 @@ async function uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp) {
             Key: filePath,
             Body: imageBuffer,
             ContentType: "image/jpeg",
+            ACL: "public-read",
         });
 
         await spacesClient.send(uploadCommand);
-        const fileUrl = `${process.env.DO_SPACES_ENDPOINT}/${process.env.DO_SPACES_BUCKET}/${filePath}`;
+        // Use the CDN URL instead of the default endpoint
+        const fileUrl = `${process.env.DO_SPACES_CDN_ENDPOINT}/${filePath}`;
         console.log(`[INFO] Image uploaded to: ${fileUrl}`);
         return fileUrl;
     } catch (uploadError) {
@@ -40,8 +42,11 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
     console.log(`[DEBUG] Preparing to save image for chat ID ${chatId}`);
 
     try {
+        // Download the image file from the Telegram URL
         const imageResponse = await axios.get(telegramFileUrl, { responseType: "arraybuffer" });
         const imageBuffer = Buffer.from(imageResponse.data);
+
+        // Upload to DO Spaces and get the CDN URL
         const imageUrl = await uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp);
 
         const botApiKey = process.env.MEDFLOW_KEY;
@@ -51,7 +56,7 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
             sender,
             timestamp: uploadTimestamp.toISOString(),
             type: "image", // Ensure the correct type is passed
-            mediaUrl: imageUrl, // URL of the uploaded image
+            mediaUrl: imageUrl, // Use the full CDN URL for the saved image
         };
 
         const apiResponse = await axios.patch(
