@@ -1,38 +1,78 @@
 // save-messages/saveAudio.js
-import fetch from "node-fetch";
 import dotenv from "dotenv";
 dotenv.config();
-const API_BASE_URL = process.env.API_BASE_URL;
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import axios from "axios";
 
-export async function saveAudio(telegramChatId, audioUrl, sender = "patient", timestamp = new Date(), medflowKey) {
-    console.log(`[DEBUG] Saving audio message for chat ID ${telegramChatId}: "${audioUrl}"`);
+const spacesClient = new S3Client({
+    endpoint: process.env.DO_SPACES_ENDPOINT,
+    region: process.env.DO_SPACES_REGION,
+    credentials: {
+        accessKeyId: process.env.DO_SPACES_KEY,
+        secretAccessKey: process.env.DO_SPACES_SECRET,
+    },
+});
+
+async function uploadAudioToSpaces(chatId, audioBuffer, uploadTimestamp) {
+    const folder = process.env.NODE_ENV === "development" ? "dev" : "prod";
+    const filePath = `${folder}/audio/${chatId}/${uploadTimestamp.toISOString()}`; // No explicit extension
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`, {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${encodeURIComponent(medflowKey)}`,
-            },
-            body: JSON.stringify({
-                mediaUrl: audioUrl,
-                sender,
-                timestamp: timestamp.toISOString(),
-                type: "audio", // Ensure the correct type is passed
-            }),
+        const uploadCommand = new PutObjectCommand({
+            Bucket: process.env.DO_SPACES_BUCKET,
+            Key: filePath,
+            Body: audioBuffer,
+            ContentType: "application/octet-stream", // Generic content type for raw audio
+            ACL: "public-read",
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[ERROR] Failed to save audio for chat ID ${telegramChatId}:`, errorText);
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        await spacesClient.send(uploadCommand);
+        const fileUrl = `${process.env.DO_SPACES_CDN_ENDPOINT}/${filePath}`;
+        console.log(`[INFO] Audio uploaded to: ${fileUrl}`);
+        return fileUrl;
+    } catch (uploadError) {
+        console.error(`[ERROR] Audio upload failed:`, uploadError);
+        throw uploadError;
+    }
+}
 
-        const data = await response.json();
-        console.log(`[INFO] Audio message saved successfully for chat ID ${telegramChatId}:`, data);
-        return data;
-    } catch (error) {
-        console.error(`[ERROR] Failed to save audio for chat ID ${telegramChatId}:`, error);
-        throw error;
+export async function saveAudio(chatId, telegramFileUrl, sender = "patient", uploadTimestamp = new Date(), caption = "") {
+    console.log(`[DEBUG] Preparing to save audio for chat ID ${chatId}`);
+
+    try {
+        // Download the audio file from the Telegram URL
+        const audioResponse = await axios.get(telegramFileUrl, { responseType: "arraybuffer" });
+        const audioBuffer = Buffer.from(audioResponse.data);
+
+        // Upload to DO Spaces and get the CDN URL
+        const audioUrl = await uploadAudioToSpaces(chatId, audioBuffer, uploadTimestamp);
+
+        const botApiKey = process.env.MEDFLOW_KEY;
+
+        const messagePayload = {
+            text: caption || "Audio Message", // Include caption as text
+            sender,
+            timestamp: uploadTimestamp.toISOString(),
+            type: "audio", // Ensure the correct type is passed
+            mediaUrl: audioUrl, // URL of the uploaded audio file
+        };
+
+        // Save the message with the audio URL
+        const apiResponse = await axios.patch(
+            `${process.env.API_BASE_URL}/api/telegram-bot/${chatId}/save-message`,
+            messagePayload,
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${encodeURIComponent(botApiKey)}`,
+                },
+            }
+        );
+
+        console.log(`[INFO] Audio saved for chat ID ${chatId}:`, apiResponse.data);
+        return apiResponse.data;
+    } catch (saveError) {
+        console.error(`[ERROR] Failed to save audio for chat ID ${chatId}:`, saveError);
+        throw saveError;
     }
 }
