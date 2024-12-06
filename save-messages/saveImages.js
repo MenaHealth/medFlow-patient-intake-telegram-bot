@@ -1,8 +1,7 @@
-// save-messages/saveImages.js
-
 import dotenv from "dotenv";
 dotenv.config();
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import axios from "axios";
 
 const spacesClient = new S3Client({
@@ -24,17 +23,34 @@ async function uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp) {
             Key: filePath,
             Body: imageBuffer,
             ContentType: "image/jpeg",
-            ACL: "public-read",
+            ACL: "private", // Set ACL to private for security
         });
 
         await spacesClient.send(uploadCommand);
-        // Use the CDN URL instead of the default endpoint
-        const fileUrl = `${process.env.DO_SPACES_CDN_ENDPOINT}/${filePath}`;
-        console.log(`[INFO] Image uploaded to: ${fileUrl}`);
-        return fileUrl;
+        console.log(`[INFO] Image uploaded to: ${filePath}`);
+        return filePath;
     } catch (uploadError) {
         console.error(`[ERROR] Image upload failed:`, uploadError);
         throw uploadError;
+    }
+}
+
+async function generateSignedUrl(filePath) {
+    try {
+        const signedUrl = await getSignedUrl(
+            spacesClient,
+            new GetObjectCommand({
+                Bucket: process.env.DO_SPACES_BUCKET,
+                Key: filePath,
+            }),
+            { expiresIn: 3600 } // Signed URL valid for 1 hour
+        );
+
+        console.log(`[INFO] Signed URL generated: ${signedUrl}`);
+        return signedUrl;
+    } catch (urlError) {
+        console.error(`[ERROR] Failed to generate signed URL:`, urlError);
+        throw urlError;
     }
 }
 
@@ -46,8 +62,11 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
         const imageResponse = await axios.get(telegramFileUrl, { responseType: "arraybuffer" });
         const imageBuffer = Buffer.from(imageResponse.data);
 
-        // Upload to DO Spaces and get the CDN URL
-        const imageUrl = await uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp);
+        // Upload to DO Spaces and get the file path
+        const filePath = await uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp);
+
+        // Generate a signed URL for the uploaded image
+        const signedUrl = await generateSignedUrl(filePath);
 
         const botApiKey = process.env.MEDFLOW_KEY;
 
@@ -56,7 +75,7 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
             sender,
             timestamp: uploadTimestamp.toISOString(),
             type: "image", // Ensure the correct type is passed
-            mediaUrl: imageUrl, // Use the full CDN URL for the saved image
+            mediaUrl: signedUrl, // Use the signed URL for the saved image
         };
 
         const apiResponse = await axios.patch(
