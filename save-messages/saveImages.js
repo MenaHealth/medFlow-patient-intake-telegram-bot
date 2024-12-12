@@ -15,7 +15,8 @@ const spacesClient = new S3Client({
 
 async function uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp) {
     const folder = process.env.NODE_ENV === "development" ? "dev" : "prod";
-    const filePath = `${folder}/images/${chatId}/${uploadTimestamp.toISOString()}.jpg`;
+    const sanitizedChatId = chatId.replace(/[^a-zA-Z0-9_-]/g, ""); // Sanitize chat ID to avoid invalid path issues
+    const filePath = `${folder}/images/${sanitizedChatId}/${uploadTimestamp.toISOString().replace(/:/g, "-")}.jpg`;
 
     try {
         const uploadCommand = new PutObjectCommand({
@@ -23,7 +24,7 @@ async function uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp) {
             Key: filePath,
             Body: imageBuffer,
             ContentType: "image/jpeg",
-            ACL: "private", // Set ACL to private for security
+            ACL: "private", // Ensure images are private
         });
 
         await spacesClient.send(uploadCommand);
@@ -54,20 +55,20 @@ async function generateSignedUrl(filePath) {
     }
 }
 
-export async function saveImage(chatId, telegramFileUrl, sender = "patient", uploadTimestamp = new Date(), caption = "") {
-    console.log(`[DEBUG] Preparing to save image for chat ID ${chatId}`);
+async function saveImage(chatId, telegramFileUrl, sender = "patient", uploadTimestamp = new Date(), caption = "") {    console.log(`[DEBUG] Preparing to save image for chat ID ${chatId}`);
 
     try {
         // Download the image file from the Telegram URL
         const imageResponse = await axios.get(telegramFileUrl, { responseType: "arraybuffer" });
         const imageBuffer = Buffer.from(imageResponse.data);
 
-        // Upload to DO Spaces and get the file path
+        // Upload to DigitalOcean Spaces using the chatId-based folder structure
         const filePath = await uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp);
 
         // Generate a signed URL for the uploaded image
         const signedUrl = await generateSignedUrl(filePath);
 
+        // Save the image metadata to your database
         const botApiKey = process.env.MEDFLOW_KEY;
 
         const messagePayload = {
@@ -96,3 +97,5 @@ export async function saveImage(chatId, telegramFileUrl, sender = "patient", upl
         throw saveError;
     }
 }
+
+export { saveImage };
