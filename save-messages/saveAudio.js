@@ -14,8 +14,18 @@ const spacesClient = new S3Client({
 });
 
 async function uploadAudioToSpaces(chatId, audioBuffer, uploadTimestamp) {
-    const folder = process.env.NODE_ENV === "development" ? "dev" : "prod";
-    const filePath = `${folder}/audio/${chatId}/${uploadTimestamp.toISOString()}`; // No explicit extension
+    // Determine the folder based on the NODE_ENV variable
+    const folder = process.env.NODE_ENV === "development"
+        ? "dev"
+        : process.env.NODE_ENV === "staging"
+            ? "staging"
+            : "prod";
+
+    // Sanitize chat ID to avoid invalid path issues
+    const sanitizedChatId = chatId.replace(/[^a-zA-Z0-9_-]/g, "");
+
+    // Construct the file path
+    const filePath = `${folder}/audio/${sanitizedChatId}/${uploadTimestamp.toISOString().replace(/:/g, "-")}`; // No explicit extension
 
     try {
         const uploadCommand = new PutObjectCommand({

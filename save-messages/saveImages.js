@@ -14,8 +14,17 @@ const spacesClient = new S3Client({
 });
 
 async function uploadImageToSpaces(chatId, imageBuffer, uploadTimestamp) {
-    const folder = process.env.NODE_ENV === "development" ? "dev" : "prod";
-    const sanitizedChatId = chatId.replace(/[^a-zA-Z0-9_-]/g, ""); // Sanitize chat ID to avoid invalid path issues
+    // Determine the folder based on the NODE_ENV variable
+    const folder = process.env.NODE_ENV === "development"
+        ? "dev"
+        : process.env.NODE_ENV === "staging"
+            ? "staging"
+            : "prod"; // Default to "prod" if neither "development" nor "staging"
+
+    // Sanitize chat ID to avoid invalid path issues
+    const sanitizedChatId = chatId.replace(/[^a-zA-Z0-9_-]/g, "");
+
+    // Construct the file path
     const filePath = `${folder}/images/${sanitizedChatId}/${uploadTimestamp.toISOString().replace(/:/g, "-")}.jpg`;
 
     try {
