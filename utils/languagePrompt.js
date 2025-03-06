@@ -12,8 +12,6 @@ Please select your language by sending the number
 
 1 = English
 2 = العربية
-3 = فارسی
-4 = پښتو
 
 (2 = Arabic / 3 = Farsi / 4 = Pashto)
 `;
