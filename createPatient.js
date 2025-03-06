@@ -1,11 +1,11 @@
-//createPatient.js
+// apps/telegram-bot/createPatient.js
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 dotenv.config();
 
 const API_BASE_URL = process.env.API_BASE_URL;
 
-// 🔹 Hardcoded mapping to match `Languages` enum
+// 🔹 Maps short language codes to full names (matches the `Languages` enum)
 const languageMap = {
   en: "English",
   ar: "Arabic",
@@ -13,18 +13,28 @@ const languageMap = {
   ps: "Pashto",
 };
 
-// 🔹 Function to ensure valid language selection
-function getValidLanguage(langCode) {
-  return languageMap[langCode] || null;
+// 🔹 Maps full language names back to short codes (for extra validation)
+const reverseLanguageMap = {
+  English: "en",
+  Arabic: "ar",
+  Farsi: "fa",
+  Pashto: "ps",
+};
+
+// 🔹 Function to validate language selection
+function getValidLanguage(langCodeOrName) {
+  if (languageMap[langCodeOrName]) return languageMap[langCodeOrName]; // Short code → Full name
+  if (reverseLanguageMap[langCodeOrName]) return langCodeOrName; // Full name is already valid
+  return null;
 }
 
 export async function createPatient(telegramChatId, languageCode = "en", medflowKey) {
   console.log(`[DEBUG] Creating patient for chat ID ${telegramChatId} with language "${languageCode}"`);
 
-  // 🔹 Ensure the language matches your model
+  // 🔹 Convert to the full language name before sending
   const patientLanguage = getValidLanguage(languageCode);
   if (!patientLanguage) {
-    console.error(`[ERROR] Invalid language code "${languageCode}"`);
+    console.error(`[ERROR] Invalid language input "${languageCode}"`);
     throw new Error(`Invalid language code: ${languageCode}`);
   }
 

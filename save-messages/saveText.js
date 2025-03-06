@@ -1,15 +1,18 @@
 // save-messages/saveText.js
 
 import fetch from "node-fetch";
-
 import dotenv from "dotenv";
 dotenv.config();
 
-dotenv.config();const API_BASE_URL = process.env.API_BASE_URL;
-
+const API_BASE_URL = process.env.API_BASE_URL;
 
 export async function saveText(telegramChatId, text, sender = "patient", timestamp = new Date(), medflowKey) {
     console.log(`[DEBUG] Saving message for chat ID ${telegramChatId}: "${text}"`);
+
+    if (!telegramChatId || !text || !sender) {
+        console.error(`[ERROR] Missing required fields: chatId=${telegramChatId}, text=${text}, sender=${sender}`);
+        throw new Error("Missing required fields: telegramChatId, text, sender");
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/telegram-bot/${telegramChatId}/save-message`, {
@@ -19,10 +22,11 @@ export async function saveText(telegramChatId, text, sender = "patient", timesta
                 Authorization: `Bearer ${encodeURIComponent(medflowKey)}`,
             },
             body: JSON.stringify({
+                telegramChatId,
                 text,
                 sender,
-                timestamp,
-                type: "text", // Add the type explicitly
+                timestamp: new Date(timestamp).toISOString(), // Convert timestamp to ISO string
+                type: "text", // Ensure type is included
             }),
         });
 
